@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: ticket-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ticket_booking
+    ports:
+      - "3306:3306"
+    networks:
+      - tech-fest-net
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - tech-fest-net
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/ticket_booking?useSSL=false&allowPublicKeyRetrieval=true
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql-db
+      - eureka-server
+    networks:
+      - tech-fest-net
+
+  event-service:
+    build: ./event-service
+    container_name: event-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/ticket_booking?useSSL=false&allowPublicKeyRetrieval=true
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql-db
+      - eureka-server
+    networks:
+      - tech-fest-net
+
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/ticket_booking?useSSL=false&allowPublicKeyRetrieval=true
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql-db
+      - eureka-server
+    networks:
+      - tech-fest-net
+
+  frontend-app:
+    build: ./frontend
+    container_name: frontend-ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - user-service
+      - event-service
+      - booking-service
+    networks:
+      - tech-fest-net
+
+networks:
+  tech-fest-net:
+    driver: bridge
