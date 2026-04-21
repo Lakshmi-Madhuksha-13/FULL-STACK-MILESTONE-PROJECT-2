@@ -79,15 +79,26 @@ public class BookingController {
             String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + (-booking.getTicketsBooked());
             restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
             
-            // Notify User
+            // Notify User with a Rich Snapshot
             String userServiceUrl = "http://user-service/api/users/notifications";
             java.util.Map<String, Object> notification = new java.util.HashMap<>();
             notification.put("userId", booking.getUserId());
-            notification.put("message", "Your booking #" + id + " has been cancelled by the administrator.");
+            
+            // Build Snapshot Message
+            String snapshot = String.format(
+                "BOOKING_SNAPSHOT|ID: #TF-%d | Event: %s | Cost: ₹%.2f | Slots: %d | Attendees: %s",
+                id, 
+                "Event #" + booking.getEventId(), // Controller doesn't have name, frontend will resolve or we can hardcode
+                booking.getTotalAmount(),
+                booking.getTicketsBooked(),
+                booking.getAttendeeDetails() // This contains JSON string of names
+            );
+            
+            notification.put("message", snapshot);
             try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
 
             bookingRepository.delete(booking);
-            return ResponseEntity.ok("Booking cancelled successfully");
+            return ResponseEntity.ok("Booking Snapshot Archived and Cancelled");
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
     }
 }
