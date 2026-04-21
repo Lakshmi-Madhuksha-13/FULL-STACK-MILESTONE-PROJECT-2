@@ -46,30 +46,55 @@ const EventBookingPage = () => {
     fetchEvent(true); // Silent update of available tickets
   };
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState(null);
+
+  const handleBookingStart = (data) => {
+    setPendingBookingData(data);
+    setShowPaymentModal(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    setIsProcessing(true);
+    // Simulate payment bank gateway time
+    await new Promise(r => setTimeout(r, 2000));
+    
+    try {
+        const response = await axios.post('http://localhost:8083/api/bookings', pendingBookingData);
+        handleBookingSuccess(response.data);
+        setShowPaymentModal(false);
+    } catch (e) {
+        alert("Payment verification failed. Please try again.");
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
   if (loading && !event) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Loading Event Details...</div>;
-  if (error) return <div className="app-container" style={{textAlign: 'center', color: 'var(--danger)', padding: '3rem'}}>{error}</div>;
+  if (error) return <div className="app-container" style={{textAlign: 'center', color: 'var(--accent)', padding: '3rem'}}>{error}</div>;
   if (!event && !loading) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Event Not Found.</div>;
 
   return (
-    <div className="app-container">
-      <Link to="/" style={{ color: 'var(--primary-color)', textDecoration: 'none', display: 'inline-block', marginBottom: '2rem' }}>
-        &larr; Back to All Events
+    <div className="app-container page-transition">
+      <Link to="/events" className="btn-elite" style={{ background: 'transparent', border: '1px solid var(--glass-border)', display: 'inline-flex', marginBottom: '2rem', width: 'auto' }}>
+        &larr; Back to Events
       </Link>
 
-      <div style={{ marginBottom: '4rem', padding: '2rem', background: 'rgba(99,102,241,0.05)', borderRadius: '1.5rem', border: '1px solid rgba(99,102,241,0.2)' }}>
-        <h2 style={{ marginBottom: '2rem', textAlign: 'center', color: 'var(--primary-color)' }}>
-           Secure Your Tickets
-        </h2>
+      <div className="glass-panel" style={{ padding: '2rem', marginBottom: '4rem' }}>
+        <h2 className="gradient-text" style={{ textAlign: 'center', marginBottom: '2rem' }}>Event Registration</h2>
         
-        <div className="grid-2">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem' }}>
           <EventDetails event={event} />
-          <div className="glass-panel">
+          <div>
             {user ? (
-              <BookingForm event={event} onBookingSuccess={handleBookingSuccess} user={user} />
+               <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <BookingForm event={event} onBookingSuccess={handleBookingStart} user={user} />
+               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <h3 style={{ color: 'var(--text-secondary)' }}>Login Required</h3>
-                <p style={{ marginBottom: '1.5rem' }}>You must be authenticated to reserve your spot.</p>
+                <h3 style={{ color: 'var(--text-dim)' }}>Login Required</h3>
+                <p style={{ marginBottom: '1.5rem', color: 'var(--text-dim)' }}>Authenticate to reserve your spot.</p>
                 <button className="btn-primary" onClick={() => navigate('/login')}>Go to Login</button>
               </div>
             )}
@@ -77,36 +102,66 @@ const EventBookingPage = () => {
         </div>
       </div>
 
-      {/* Success Modal Popup */}
+      {/* Mock Payment Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay">
+            <div className="modal-content">
+                <h2 className="gradient-text">Secure Checkout</h2>
+                <p style={{ color: 'var(--text-dim)', marginBottom: '2rem' }}>Amount to Pay: <strong>₹{pendingBookingData?.totalAmount}</strong></p>
+                
+                <div className="form-group">
+                    <label>Card Number</label>
+                    <input type="text" className="form-control" placeholder="XXXX XXXX XXXX 1234" disabled={isProcessing}/>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="form-group">
+                        <label>Expiry</label>
+                        <input type="text" className="form-control" placeholder="MM/YY" disabled={isProcessing}/>
+                    </div>
+                    <div className="form-group">
+                        <label>CVV</label>
+                        <input type="password" className="form-control" placeholder="***" disabled={isProcessing}/>
+                    </div>
+                </div>
+
+                <button className="btn-primary" onClick={handleConfirmPayment} disabled={isProcessing}>
+                    {isProcessing ? 'Verifying with Bank...' : 'Pay & Confirm Booking'}
+                </button>
+                {!isProcessing && (
+                    <button style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', marginTop: '1rem', width: '100%', cursor: 'pointer' }} onClick={() => setShowPaymentModal(false)}>
+                        Cancel Transaction
+                    </button>
+                )}
+            </div>
+        </div>
+      )}
+
+      {/* Enhanced Success Modal */}
       {showSuccessModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '4rem', color: 'var(--success)', marginBottom: '1rem' }}>✅</div>
-              <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Booking Successful!</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Your tickets have been reserved.</p>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✨</div>
+              <h2 className="gradient-text">Booking Confirmed!</h2>
               
-              <div className="ticket-visual">
-                <h3 style={{ color: 'var(--primary-color)', margin: '0 0 1rem 0', textTransform: 'uppercase', letterSpacing: '2px' }}>Event Ticket</h3>
-                <div style={{ textAlign: 'left', fontSize: '0.9rem' }}>
-                  <div style={{ marginBottom: '0.5rem' }}><strong>Event:</strong> {ticketSummary.eventName}</div>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <strong>Attendee(s):</strong> 
-                    <div style={{ marginLeft: '1rem', color: 'var(--text-secondary)' }}>
-                        {ticketSummary.attendees.map((a, i) => <div key={i}>{i+1}. {a.name} ({a.department})</div>)}
-                    </div>
+              <div className="ticket-pass">
+                <div className="ticket-top">OFFICIAL ENTRY PASS</div>
+                <div className="ticket-body" style={{ textAlign: 'left', color: '#1e293b' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{ticketSummary.eventName}</h4>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>ID: #TKT-{ticketSummary.id}</div>
+                  
+                  <div style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
+                    <strong>Attendees:</strong>
+                    {ticketSummary.attendees.map((a, i) => <div key={i}>• {a.name}</div>)}
                   </div>
-                  <div style={{ marginBottom: '0.5rem' }}><strong>Quantity:</strong> {ticketSummary.ticketsBooked} Tickets</div>
-                  <div style={{ marginBottom: '0.5rem' }}><strong>Total Paid:</strong> ₹{ticketSummary.totalAmount}</div>
+                </div>
+                <div className="ticket-footer">
+                    <div className="qr-mock"></div>
                 </div>
               </div>
 
-              <button 
-                className="btn-primary" 
-                style={{ marginTop: '2rem' }} 
-                onClick={() => { setShowSuccessModal(false); navigate('/bookings'); }}
-              >
-                View Booking History
+              <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+                View in Dashboard
               </button>
             </div>
           </div>

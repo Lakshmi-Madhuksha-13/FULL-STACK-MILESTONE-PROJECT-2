@@ -88,6 +88,28 @@ const AdminDashboard = () => {
   return (
     <div className="app-container page-transition">
       <h2 className="gradient-text">Admin Control Panel</h2>
+
+      {/* Analytics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--success)' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Total Revenue</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--success)', marginTop: '0.5rem' }}>
+                ₹{bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}
+            </div>
+        </div>
+        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--primary)' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Registrations</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary)', marginTop: '0.5rem' }}>
+                {users.length}
+            </div>
+        </div>
+        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--accent)' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Tickets Sold</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent)', marginTop: '0.5rem' }}>
+                {bookings.reduce((sum, b) => sum + (b.ticketsBooked || 0), 0)}
+            </div>
+        </div>
+      </div>
       
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
         <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'events' ? 1 : 0.6 }} onClick={() => setActiveTab('events')}>Manage Events</button>
