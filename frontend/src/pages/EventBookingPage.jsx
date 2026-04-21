@@ -49,6 +49,7 @@ const EventBookingPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingBookingData, setPendingBookingData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const handleBookingStart = (data) => {
     setPendingBookingData(data);
@@ -105,31 +106,51 @@ const EventBookingPage = () => {
       {/* Mock Payment Modal */}
       {showPaymentModal && (
         <div className="modal-overlay">
-            <div className="modal-content">
-                <h2 className="gradient-text">Secure Checkout</h2>
-                <p style={{ color: 'var(--text-dim)', marginBottom: '2rem' }}>Amount to Pay: <strong>₹{pendingBookingData?.totalAmount}</strong></p>
+            <div className="modal-content" style={{ maxWidth: '450px' }}>
+                <h2 className="gradient-text">Select Payment Method</h2>
                 
-                <div className="form-group">
-                    <label>Card Number</label>
-                    <input type="text" className="form-control" placeholder="XXXX XXXX XXXX 1234" disabled={isProcessing}/>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <button className="btn-primary" style={{ flex: 1, background: paymentMethod === 'card' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', opacity: 1 }} onClick={() => setPaymentMethod('card')}>💳 Card</button>
+                    <button className="btn-primary" style={{ flex: 1, background: paymentMethod === 'upi' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', opacity: 1 }} onClick={() => setPaymentMethod('upi')}>📱 UPI</button>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="form-group">
-                        <label>Expiry</label>
-                        <input type="text" className="form-control" placeholder="MM/YY" disabled={isProcessing}/>
-                    </div>
-                    <div className="form-group">
-                        <label>CVV</label>
-                        <input type="password" className="form-control" placeholder="***" disabled={isProcessing}/>
-                    </div>
+
+                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.02)' }}>
+                    <p style={{ color: 'var(--text-dim)', marginBottom: '1rem', fontSize: '0.9rem' }}>Amount: <strong style={{ color: 'white' }}>₹{pendingBookingData?.totalAmount}</strong></p>
+                    
+                    {paymentMethod === 'card' ? (
+                        <>
+                            <div className="form-group">
+                                <label>Card Number</label>
+                                <input type="text" className="form-control" placeholder="4111 XXXX XXXX 1111" disabled={isProcessing}/>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label>Expiry</label>
+                                    <input type="text" className="form-control" placeholder="MM/YY" disabled={isProcessing}/>
+                                </div>
+                                <div className="form-group">
+                                    <label>CVV</label>
+                                    <input type="password" className="form-control" placeholder="***" disabled={isProcessing}/>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'inline-block', marginBottom: '1rem' }}>
+                                <div className="qr-mock" style={{ width: '150px', height: '150px' }}></div>
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Scan QR or enter VPA</p>
+                            <input type="text" className="form-control" style={{ textAlign: 'center' }} placeholder="student@okaxis" disabled={isProcessing}/>
+                        </div>
+                    )}
                 </div>
 
                 <button className="btn-primary" onClick={handleConfirmPayment} disabled={isProcessing}>
-                    {isProcessing ? 'Verifying with Bank...' : 'Pay & Confirm Booking'}
+                    {isProcessing ? 'Verifying Transaction...' : paymentMethod === 'card' ? 'Pay Securely' : 'I have Paid via UPI'}
                 </button>
                 {!isProcessing && (
                     <button style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', marginTop: '1rem', width: '100%', cursor: 'pointer' }} onClick={() => setShowPaymentModal(false)}>
-                        Cancel Transaction
+                        Cancel
                     </button>
                 )}
             </div>
