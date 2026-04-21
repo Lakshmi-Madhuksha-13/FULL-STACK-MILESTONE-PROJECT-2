@@ -36,8 +36,8 @@ const Navbar = () => {
         <nav style={{ position: 'sticky', top: '0', zIndex: '100', background: 'rgba(2, 6, 23, 0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--glass-border)', padding: '1rem 0' }}>
             <div className="app-container" style={{ padding: '0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyCenter: 'center', fontWeight: 'bold', fontSize: '1.5rem', boxShadow: '0 0 15px var(--primary-glow)' }}>&nbsp;T</div>
-                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', letterSpacing: '-1px' }}>TechFest<span style={{ color: var(--primary) }}>.</span></span>
+                    <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.5rem', boxShadow: '0 0 15px var(--primary-glow)' }}>&nbsp;T</div>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', letterSpacing: '-1px' }}>TechFest<span style={{ color: 'var(--primary)' }}>.</span></span>
                 </Link>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
