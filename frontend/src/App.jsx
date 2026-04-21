@@ -1,15 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import ChatSupport from './components/ChatSupport';
 import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import EventsPage from './pages/EventsPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import EventBookingPage from './pages/EventBookingPage';
-import EventsPage from './pages/EventsPage';
-import Profile from './pages/Profile';
-import ForgotPassword from './pages/ForgotPassword';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import BookingPage from './pages/BookingPage';
 
 function App() {
   return (
@@ -18,14 +17,13 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/events" element={<EventsPage />} />
-        <Route path="/book/:id" element={<EventBookingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/book/:id" element={<BookingPage />} />
       </Routes>
+      <ChatSupport />
     </Router>
   );
 }
