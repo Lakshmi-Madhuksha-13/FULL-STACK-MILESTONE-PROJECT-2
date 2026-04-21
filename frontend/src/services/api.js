@@ -1,35 +1,41 @@
 import axios from 'axios';
 
-const isProduction = import.meta.env.PROD;
-
-const CLOUD_URLS = {
-    USER_SERVICE: "https://your-user-service.onrender.com/api/users",
-    EVENT_SERVICE: "https://your-event-service.onrender.com/api/events",
-    BOOKING_SERVICE: "https://your-booking-service.onrender.com/api/bookings"
-};
+// 🌐 CLOUD-READY CONFIGURATION
+const isProduction = false; 
 
 const LOCAL_URLS = {
     USER_SERVICE: "http://localhost:8081/api/users",
     EVENT_SERVICE: "http://localhost:8082/api/events",
-    BOOKING_SERVICE: "http://localhost:8083/api/bookings"
+    BOOKING_SERVICE: "http://localhost:8083/api/bookings",
+    SUPPORT_SERVICE: "http://localhost:8081/api/support"
 };
 
-const BASE_URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;
+const CLOUD_URLS = {
+    USER_SERVICE: "https://your-users.render.com/api/users",
+    EVENT_SERVICE: "https://your-events.render.com/api/events",
+    BOOKING_SERVICE: "https://your-bookings.render.com/api/bookings",
+    SUPPORT_SERVICE: "https://your-users.render.com/api/support"
+};
+
+const URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;
+
+const createInstance = (baseUrl, name) => {
+    const inst = axios.create({ baseURL: baseUrl || "" });
+    inst.interceptors.response.use(
+        r => r,
+        e => {
+            console.warn(`[Sync Info] ${name} is currently offline. Background retries active.`);
+            return Promise.reject(e);
+        }
+    );
+    return inst;
+};
 
 const api = {
-    user: axios.create({ baseURL: BASE_URLS.USER_SERVICE }),
-    event: axios.create({ baseURL: BASE_URLS.EVENT_SERVICE }),
-    booking: axios.create({ baseURL: BASE_URLS.BOOKING_SERVICE }),
-    support: axios.create({ baseURL: `${LOCAL_URLS.USER_SERVICE.replace('/users', '/support')}` })
+    user: createInstance(URLS.USER_SERVICE, "UserService"),
+    event: createInstance(URLS.EVENT_SERVICE, "EventService"),
+    booking: createInstance(URLS.BOOKING_SERVICE, "BookingService"),
+    support: createInstance(URLS.SUPPORT_SERVICE, "SupportService")
 };
-
-// Add interceptors for debugging
-api.event.interceptors.response.use(
-    response => response,
-    error => {
-        console.error("EVENT_SERVICE_OFFLINE:", error.config.baseURL);
-        return Promise.reject(error);
-    }
-);
 
 export default api;

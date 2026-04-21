@@ -7,15 +7,15 @@ const UserDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('bookings'); 
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [wishlistEvents, setWishlistEvents] = useState([]);
-  const [countdown, setCountdown] = useState({ text: 'Syncing...', target: null });
+  const [countdown, setCountdown] = useState({ text: '...', target: null });
   const [showCertificate, setShowCertificate] = useState(false);
-  const [status, setStatus] = useState({ bookings: 'online', notifications: 'online', events: 'online' });
+  const [status, setStatus] = useState({ bookings: 'evaluating', notifications: 'evaluating', events: 'evaluating' });
 
-  // Support & Mail States
+  // Support & Interactive Systems
   const [showChat, setShowChat] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [userMsg, setUserMsg] = useState('');
@@ -31,8 +31,14 @@ const UserDashboard = () => {
 
   useEffect(() => {
     if (user && user.id) {
-      fetchAllData();
-      const interval = setInterval(fetchAllData, 5000); 
+      // Parallel Fetch for Instant Response
+      Promise.all([
+          fetchBookings(),
+          fetchNotifications(),
+          fetchEvents()
+      ]).then(() => setIsDataLoaded(true));
+      
+      const interval = setInterval(fetchAllData, 6000); 
       return () => clearInterval(interval);
     }
   }, [user?.id]);
@@ -40,7 +46,7 @@ const UserDashboard = () => {
   useEffect(() => {
     if (user && showChat) {
         fetchChat();
-        const chatInterval = setInterval(fetchChat, 3000);
+        const chatInterval = setInterval(fetchChat, 3500);
         return () => clearInterval(chatInterval);
     }
   }, [user, showChat]);
@@ -58,27 +64,34 @@ const UserDashboard = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
   };
 
-  const fetchAllData = async () => {
+  const fetchBookings = async () => {
     try {
-        const bRes = await api.booking.get(`/user/${user.id}`);
-        setBookings(Array.isArray(bRes.data) ? bRes.data : []);
-    } catch (e) {}
+        const res = await api.booking.get(`/user/${user.id}`);
+        setBookings(Array.isArray(res.data) ? res.data : []);
+        setStatus(prev => ({...prev, bookings: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
+  };
 
+  const fetchNotifications = async () => {
     try {
-        const nRes = await api.user.get(`/${user.id}/notifications`);
-        const oldLen = notifications.length;
-        if (oldLen > 0 && nRes.data.length > oldLen) {
-            showInteractiveToast("📩 New Official Correspondence Received.", "info");
-        }
-        setNotifications(Array.isArray(nRes.data) ? nRes.data : []);
-    } catch (e) {}
+        const res = await api.user.get(`/${user.id}/notifications`);
+        setNotifications(Array.isArray(res.data) ? res.data : []);
+        setStatus(prev => ({...prev, notifications: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, notifications: 'offline'})); }
+  };
 
+  const fetchEvents = async () => {
     try {
-        const eRes = await api.event.get('');
-        setAllEvents(eRes.data);
-    } catch (e) {}
-    
-    setLoading(false);
+        const res = await api.event.get('');
+        setAllEvents(res.data);
+        setStatus(prev => ({...prev, events: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, events: 'offline'})); }
+  };
+
+  const fetchAllData = () => {
+    fetchBookings();
+    fetchNotifications();
+    fetchEvents();
   };
 
   const fetchChat = async () => {
@@ -88,17 +101,23 @@ const UserDashboard = () => {
     } catch (e) {}
   };
 
-  const handleSendMessage = async () => {
-    if (!userMsg.trim()) return;
-    const msg = { userId: user.id, senderName: user.name, message: userMsg, type: 'USER' };
-    await api.support.post('/send', msg);
-    setUserMsg('');
-    fetchChat();
+  const getEventName = (id) => {
+    const ev = allEvents.find(e => e.id === id);
+    return ev ? ev.eventName : `Loading Heritage Data...`;
+  };
+
+  const fetchWishlist = () => {
+    try {
+        const ids = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        if (ids.length > 0 && allEvents.length > 0) {
+            setWishlistEvents(allEvents.filter(e => ids.includes(e.id)));
+        }
+    } catch (e) {}
   };
 
   const calculateCountdown = () => {
     if (!bookings.length || !allEvents.length) {
-        setCountdown({ text: 'No Records Found', target: null });
+        setCountdown({ text: 'Accessing Schedule...', target: null });
         return;
     }
     const eventDates = bookings.map(b => {
@@ -109,7 +128,7 @@ const UserDashboard = () => {
     }).filter(d => d !== null && d.date > new Date());
 
     if (!eventDates.length) {
-        setCountdown({ text: 'Season Ended', target: 'Completed' });
+        setCountdown({ text: 'Season Concluded', target: 'Fest Success' });
         return;
     }
     const closest = eventDates.sort((a, b) => a.date - b.date)[0];
@@ -121,192 +140,133 @@ const UserDashboard = () => {
     setCountdown({ text: `${d}d ${h}h ${m}m ${s}s`, target: closest.name });
   };
 
-  const markAsRead = async (id) => {
-    await api.user.put(`/notifications/${id}/read`);
-    fetchAllData();
-  };
-
   const parseSnapshot = (msg) => {
-    if (!msg.startsWith('BOOKING_SNAPSHOT|')) return { isSnapshot: false, text: msg };
+    if (!msg || !msg.startsWith('BOOKING_SNAPSHOT|')) return { isSnapshot: false, text: msg || 'Official Notification' };
     const parts = msg.split('|').reduce((acc, p) => {
-        const [key, val] = p.split(': ');
-        if (val) acc[key.trim()] = val.trim();
+        const splitIdx = p.indexOf(': ');
+        if (splitIdx > -1) {
+            const key = p.substring(0, splitIdx).trim();
+            const val = p.substring(splitIdx + 2).trim();
+            acc[key] = val;
+        }
         return acc;
     }, {});
     return { isSnapshot: true, ...parts };
   };
 
-  const parseAttendees = (details) => {
-    try {
-      if (!details) return [];
-      const parsed = JSON.parse(details);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) { 
-        if (typeof details === 'string' && details.includes('name')) return [{name: 'Syncing...'}];
-        return []; 
-    }
-  };
-
-  if (!user) return <div className="app-container" style={{textAlign: 'center', padding: '5rem'}}><h2>Session Closed</h2><button className="btn-primary" onClick={() => navigate('/login')}>Login</button></div>;
+  if (!user) return <div className="app-container" style={{textAlign: 'center', padding: '5rem'}}><h2>Session Expired</h2><button className="btn-primary" onClick={() => navigate('/login')}>Return to Login</button></div>;
 
   return (
-    <div className="app-container page-transition">
-      {/* GLOBAL TOAST */}
+    <div className="app-container page-transition" style={{ minHeight: '100vh', opacity: 1, transition: 'opacity 0.4s' }}>
+      {/* 🚀 INSTANT-RENDER TOASTS */}
       {toast.show && (
-          <div className="toast-interactive bounce-in" style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: '2000', padding: '1rem 2rem', background: 'var(--primary)', borderRadius: '2rem', boxShadow: '0 0 40px var(--primary-bright)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><span>📩</span><span style={{ fontWeight: 'bold' }}>{toast.message}</span></div>
+          <div className="toast-interactive bounce-in" style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: '5000', padding: '1rem 2rem', background: 'var(--primary)', borderRadius: '2rem', boxShadow: '0 0 40px var(--primary-bright)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><span>🚀</span><span style={{ fontWeight: 'bold' }}>{toast.message}</span></div>
           </div>
       )}
 
-      {countdown.target && (
-          <div className="glass-panel" style={{ background: 'linear-gradient(90deg, var(--primary), var(--secondary))', padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                  <h4 style={{ margin: 0, opacity: 0.8, fontSize: '0.8rem', textTransform: 'uppercase' }}>Next Milestone: {countdown.target}</h4>
-                  <div style={{ fontSize: '2.5rem', fontWeight: '900' }}>{countdown.text}</div>
-              </div>
-              <div style={{ fontSize: '3rem' }}>🚀</div>
+      {/* 🏗️ SCAFFOLDED HEADER: Renders instantly */}
+      <div className="glass-panel" style={{ background: 'linear-gradient(90deg, var(--primary), var(--secondary))', padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+              <h4 style={{ margin: 0, opacity: 0.8, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {countdown.target || 'System Status: Active'}
+              </h4>
+              <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'white' }}>{countdown.text}</div>
           </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>Ticket Inventory</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'notifications' ? 1 : 0.6 }} onClick={() => setActiveTab('notifications')}>Official Inbox ({notifications.filter(n => !n.read).length})</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'wishlist' ? 1 : 0.6 }} onClick={() => setActiveTab('wishlist')}>Starred ⭐</button>
+          <div style={{ fontSize: '3rem', opacity: 0.5 }}>⚡</div>
       </div>
 
-      <div className="glass-panel" style={{ minHeight: '400px' }}>
+      <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.5, transition: '0.3s' }} onClick={() => setActiveTab('bookings')}>My Tickets</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'notifications' ? 1 : 0.5, transition: '0.3s' }} onClick={() => setActiveTab('notifications')}>
+            Official Inbox {notifications.filter(n => !n.read).length > 0 && <span style={{ marginLeft: '6px', background: 'white', color: 'black', borderRadius: '50%', padding: '0 5px', fontSize: '0.6rem' }}>{notifications.filter(n => !n.read).length}</span>}
+        </button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'wishlist' ? 1 : 0.5, transition: '0.3s' }} onClick={() => setActiveTab('wishlist')}>Stars ⭐</button>
+      </div>
+
+      <div className="glass-panel" style={{ minHeight: '500px', padding: '2rem', position: 'relative' }}>
+        {!isDataLoaded && (
+            <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '10px' }}>
+                <span className="sync-pulse"></span> <small style={{ fontSize: '0.6rem', opacity: 0.4 }}>SYNCING DATA...</small>
+            </div>
+        )}
+
         {activeTab === 'bookings' ? (
           <div>
-            <h2 className="gradient-text">My Experiences</h2>
+            <h2 className="gradient-text" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>Transaction Ledger</h2>
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    <tr><th>ID</th><th>EVENT NAME</th><th>REVENUE</th><th>ACTION</th></tr>
+                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.75rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                    <tr><th style={{ padding: '1rem' }}>UID</th><th style={{ padding: '1rem' }}>EVENT ASSET</th><th style={{ padding: '1rem' }}>AMOUNT</th><th style={{ padding: '1rem' }}>ACTION</th></tr>
                 </thead>
-                <tbody>
+                <tbody style={{ fontSize: '0.9rem' }}>
                     {bookings.map(b => (
-                    <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '1.2rem 1rem', fontWeight: 'bold' }}>#TF-{b.id}</td>
-                        <td style={{ padding: '1.2rem 1rem', color: 'var(--primary)', fontWeight: 'bold' }}>{getEventName(b.eventId)}</td>
-                        <td style={{ padding: '1.2rem 1rem' }}>₹{b.totalAmount}</td>
-                        <td style={{ padding: '1.2rem 1rem' }}>
-                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(false); }} style={{ padding: '0.4rem 1rem' }}>View Pass</button>
+                    <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        <td style={{ padding: '1rem', fontWeight: '800', color: 'var(--text-dim)' }}>#TF-{b.id}</td>
+                        <td style={{ padding: '1rem', color: 'var(--primary)', fontWeight: 'bold' }}>{getEventName(b.eventId)}</td>
+                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
+                        <td style={{ padding: '1rem' }}>
+                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(false); }} style={{ padding: '0.3rem 1rem', fontSize: '0.7rem' }}>ENTER PASS</button>
                         </td>
                     </tr>
                     ))}
-                    {!loading && !bookings.length && (<tr><td colSpan="4" style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>Registry Empty. Explore the Events page to begin.</td></tr>)}
+                    {isDataLoaded && !bookings.length && (<tr><td colSpan="4" style={{ padding: '5rem', textAlign: 'center', opacity: 0.3 }}>No active records found in the booking service.</td></tr>)}
                 </tbody>
                 </table>
             </div>
           </div>
         ) : activeTab === 'notifications' ? (
             <div>
-                <h2 className="gradient-text">Management Correspondence</h2>
-                <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <h2 className="gradient-text" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>Management Inbox</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     {notifications.map(n => {
                         const snap = parseSnapshot(n.message);
                         return (
-                            <div key={n.id} onClick={() => { setSelectedMail(n); markAsRead(n.id); }} className="glass-panel" style={{ padding: '1.2rem', cursor: 'pointer', borderLeft: n.read ? 'none' : '4px solid var(--primary)', background: n.read ? 'transparent' : 'rgba(139, 92, 246, 0.05)', transition: '0.3s' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{snap.isSnapshot ? `Official Correspondence: ${snap.ID}` : 'General Update'}</div>
-                                    <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{new Date(n.timestamp).toLocaleString()}</div>
+                            <div key={n.id} onClick={() => { setSelectedMail(n); if(!n.read) api.user.put(`/notifications/${n.id}/read`).then(fetchAllData); }} className="glass-panel" style={{ padding: '1rem', cursor: 'pointer', borderLeft: n.read ? 'none' : '4px solid var(--primary)', background: n.read ? 'transparent' : 'rgba(139, 92, 246, 0.05)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.6 }}>
+                                    <span>{snap.ID || 'SYSTEM LOG'}</span>
+                                    <span>{new Date(n.timestamp).toLocaleTimeString()}</span>
                                 </div>
-                                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {snap.isSnapshot ? `Details regarding your booking for ${snap.Event}...` : n.message}
-                                </p>
+                                <div style={{ fontWeight: 'bold', margin: '0.3rem 0' }}>{snap.Event || 'Broadcast Message'}</div>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.message}</div>
                             </div>
                         );
                     })}
+                    {isDataLoaded && !notifications.length && <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.3 }}>Your inbox is currently clear.</div>}
                 </div>
             </div>
-        ) : <div>Starred items hub...</div>}
+        ) : <div>Loading Starred assets...</div>}
       </div>
 
-      {/* SUPPORT WIDGET */}
+      {/* 💬 FLOATING SUPPORT */}
       <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '1000' }}>
             {showChat ? (
-                <div className="glass-panel page-transition" style={{ width: '320px', height: '400px', display: 'flex', flexDirection: 'column', padding: '1rem', background: '#020617', border: '1px solid var(--primary)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Support Line</span>
+                <div className="glass-panel page-transition" style={{ width: '320px', height: '400px', display: 'flex', flexDirection: 'column', padding: '1.2rem', background: '#020617', border: '1px solid var(--primary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
+                        <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>DIRECT SUPPORT</span>
                         <button onClick={() => setShowChat(false)} style={{ background: 'transparent', border: 'none', color: 'white' }}>✖</button>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {chatHistory.map((m, i) => (
-                            <div key={i} style={{ alignSelf: m.type === 'USER' ? 'flex-end' : 'flex-start', background: m.type === 'USER' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '0.8rem', margin: '0.3rem 0', fontSize: '0.8rem' }}>{m.message}</div>
+                            <div key={i} style={{ alignSelf: m.type === 'USER' ? 'flex-end' : 'flex-start', background: m.type === 'USER' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.5rem 0.8rem', borderRadius: '0.8rem', fontSize: '0.75rem', maxWidth: '85%' }}>{m.message}</div>
                         ))}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="text" className="form-control" value={userMsg} onChange={(e) => setUserMsg(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
-                        <button className="btn-primary" style={{ width: '50px' }} onClick={handleSendMessage}>➤</button>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <input type="text" className="form-control" style={{ fontSize: '0.8rem' }} value={userMsg} onChange={(e) => setUserMsg(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
+                        <button className="btn-primary" style={{ width: '45px' }} onClick={handleSendMessage}>➤</button>
                     </div>
                 </div>
-            ) : <button className="btn-primary" onClick={() => setShowChat(true)} style={{ width: '60px', height: '60px', borderRadius: '50%', boxShadow: '0 0 30px var(--primary-bright)' }}>💬</button>}
+            ) : <button className="btn-primary" onClick={() => setShowChat(true)} style={{ width: '60px', height: '60px', borderRadius: '50%' }}>💬</button>}
       </div>
 
-      {/* OFFICIAL MAIL MODAL */}
-      {selectedMail && (
-          <div className="modal-overlay">
-              <div className="modal-content page-transition" style={{ maxWidth: '650px', background: 'white', color: '#1e293b', padding: '3rem', border: 'none' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
-                        <div style={{ fontWeight: '900', color: 'var(--primary)', letterSpacing: '4px', fontSize: '0.7rem' }}>TECHFEST MANAGEMENT OFFICE</div>
-                        <h2 style={{ color: '#0f172a', marginTop: '0.5rem' }}>Official Correspondence</h2>
-                    </div>
-                    
-                    <p style={{ fontWeight: 'bold' }}>Dear {user.name},</p>
-                    
-                    {(() => {
-                        const snap = parseSnapshot(selectedMail.message);
-                        if (!snap.isSnapshot) return <p style={{ lineHeight: '1.6' }}>{selectedMail.message}</p>;
-                        return (
-                            <div>
-                                <p style={{ lineHeight: '1.6' }}>This letter serves as formal notification regarding your recent participation booking in our upcoming Technical Festival.</p>
-                                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', margin: '1.5rem 0', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                        <div><strong>Reference:</strong> {snap.ID}</div>
-                                        <div><strong>Event:</strong> {snap.Event}</div>
-                                        <div><strong>Total Cost:</strong> {snap.Cost}</div>
-                                        <div><strong>Status:</strong> <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>REVOKED</span></div>
-                                    </div>
-                                    <div style={{ marginTop: '1rem' }}>
-                                        <strong>Registered Attendees:</strong>
-                                        <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                                            {parseAttendees(snap.Attendees).map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
-                                        </div>
-                                    </div>
-                                </div>
-                                <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>Note: If you believe this revocation was made in error, please contact our Support Hub immediately via your dashboard portal.</p>
-                            </div>
-                        );
-                    })()}
-
-                    <div style={{ marginTop: '3rem', borderTop: '2px solid #e2e8f0', paddingTop: '1rem', fontSize: '0.9rem' }}>
-                        <p style={{ margin: 0 }}>Sincerely,</p>
-                        <p style={{ fontWeight: 'bold', margin: '0.2rem 0' }}>The Technical Festival Executive Committee</p>
-                        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Received: {new Date(selectedMail.timestamp).toLocaleString()}</p>
-                    </div>
-
-                    <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-                        <button className="btn-primary" onClick={() => setSelectedMail(null)}>Close Inbox</button>
-                    </div>
-              </div>
-          </div>
-      )}
-
-      {/* TICKET PASS MODAL (Existing logic for Viewing Pass) */}
-      {selectedBooking && (
-          <div className="modal-overlay">
-              <div className="modal-content" style={{ maxWidth: '420px', background: 'transparent' }}>
-                    <div className="real-ticket">
-                        <div className="ticket-header"><h3>{getEventName(selectedBooking.eventId)}</h3></div>
-                        <div className="ticket-details">
-                            <p>#TF-{selectedBooking.id}</p>
-                            <div>{parseAttendees(selectedBooking.attendeeDetails).map((a, i) => <div key={i}>• {a.name}</div>)}</div>
-                        </div>
-                    </div>
-                    <button className="btn-primary" onClick={() => setSelectedBooking(null)}>Close</button>
-              </div>
-          </div>
-      )}
+      <style>{`
+        .sync-pulse {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--primary); display: inline-block;
+            animation: pulseFade 1.5s infinite;
+        }
+        @keyframes pulseFade { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
+      `}</style>
     </div>
   );
 };
