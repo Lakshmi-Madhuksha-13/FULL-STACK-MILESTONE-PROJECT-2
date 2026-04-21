@@ -15,19 +15,26 @@ const Login = () => {
     setError('');
     
     try {
-      const response = await api.user.get(`/login?email=${email}&password=${password}`);
+      // 🛡️ PROTOCOL FIX: Using POST with JSON body to match backend UserController
+      const response = await api.user.post('/login', { email, password });
       const user = response.data;
       
       if (user && user.id) {
         localStorage.setItem('currentUser', JSON.stringify(user));
-        // Cinematic Redirect
+        // Redirect based on authority level
         if (user.role === 'ADMIN') navigate('/admin');
         else navigate('/dashboard');
       } else {
-        setError('Authentication Failed: Identity not recognized in our database.');
+        setError('Authentication Failed: Identity not recognized.');
       }
     } catch (err) {
-      setError('System Connection Standby: Microservices are currently unreachable.');
+      if (err.response?.status === 401) {
+          setError('Invalid Credentials: The security key provided is incorrect.');
+      } else if (err.response?.status === 404) {
+          setError('Account Not Found: This identifier is not registered in our database.');
+      } else {
+          setError('System Connection Standby: Microservices are currently unreachable.');
+      }
     } finally {
       setLoading(false);
     }
@@ -38,7 +45,7 @@ const Login = () => {
       <div className="glass-panel" style={{ maxWidth: '450px', width: '100%', padding: '3rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <div style={{ display: 'inline-flex', width: '50px', height: '50px', background: 'var(--primary)', borderRadius: '12px', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 0 25px var(--primary-bright)', color: 'white', marginBottom: '1.5rem' }}>T</div>
-            <h2 className="gradient-text" style={{ fontSize: '2.5rem', margin: 0 }}>Portal Access</h2>
+            <h2 className="gradient-text" style={{ fontSize: '2.5rem', margin: 0 }}>Authorize Session</h2>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Synchronize with the Technical Fest Cloud.</p>
         </div>
 

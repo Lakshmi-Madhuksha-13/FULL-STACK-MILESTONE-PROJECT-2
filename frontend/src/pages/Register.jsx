@@ -14,13 +14,17 @@ const Register = () => {
         setError('');
 
         try {
-            await api.user.post('', formData);
-            // Auto-Login logic
-            const loginRes = await api.user.get(`/login?email=${formData.email}&password=${formData.password}`);
+            // 🛡️ ENDPOINT FIX: Using /register to match backend UserController
+            await api.user.post('/register', formData);
+            
+            // Auto-Login after registry
+            const loginRes = await api.user.post('/login', { email: formData.email, password: formData.password });
             localStorage.setItem('currentUser', JSON.stringify(loginRes.data));
-            navigate('/dashboard');
+            
+            if (loginRes.data.role === 'ADMIN') navigate('/admin');
+            else navigate('/dashboard');
         } catch (err) {
-            setError('Registry Conflict: Identifer already exists or system is offline.');
+            setError(err.response?.data || 'Registry Conflict: Identifer already exists or system is offline.');
         } finally {
             setLoading(false);
         }
@@ -36,7 +40,7 @@ const Register = () => {
                 </div>
 
                 <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                    {error && <div className="error-text" style={{ padding: '0.8rem', borderLeft: '4px solid var(--vivid-pink)' }}>{error}</div>}
+                    {error && <div className="error-text" style={{ padding: '0.8rem', borderLeft: '4px solid var(--vivid-pink)', background: 'rgba(244, 63, 94, 0.05)' }}>{error}</div>}
                     
                     <div className="form-group">
                         <label style={labelStyle}>FULL NAME</label>
@@ -50,7 +54,7 @@ const Register = () => {
 
                     <div className="form-group">
                         <label style={labelStyle}>SECURITY KEY (PASSWORD)</label>
-                        <input type="password" placeholder="••••••••" className="form-control" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required title="Security Key is required for identity protection." />
+                        <input type="password" placeholder="••••••••" className="form-control" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
                     </div>
 
                     <div className="form-group">
