@@ -27,7 +27,8 @@ const EventsPage = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.event.get('/events');
+      // Corrected: hits /api/events directly
+      const response = await api.event.get('/');
       setEvents(response.data);
     } catch (err) {
       setError('Connection failed. Microservices offline.');

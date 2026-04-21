@@ -27,7 +27,8 @@ const EventBookingPage = () => {
   const fetchEvent = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
-      const response = await api.event.get(`/events/${id}`);
+      // Corrected: hits /api/events/{id}
+      const response = await api.event.get(`/${id}`);
       setEvent(response.data);
       setError('');
     } catch (err) {
@@ -51,7 +52,8 @@ const EventBookingPage = () => {
     await new Promise(r => setTimeout(r, 2500));
     
     try {
-        const response = await api.booking.post('/bookings', pendingBookingData);
+        // Hits /api/bookings/
+        const response = await api.booking.post('/', pendingBookingData);
         setTicketSummary({
             ...response.data,
             eventName: event.eventName,

@@ -13,10 +13,11 @@ const Register = () => {
         setError('');
         setLoading(true);
         try {
-            await api.user.post('/', formData);
+            // Updated to hit /api/users/register explicitly
+            await api.user.post('/register', formData);
             navigate('/login', { state: { message: 'Registration successful! Please login.' } });
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+            setError(err.response?.data || 'Registration failed. Service might be offline.');
         } finally {
             setLoading(false);
         }

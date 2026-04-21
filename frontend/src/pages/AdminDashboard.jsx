@@ -16,15 +16,18 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       if (activeTab === 'events') {
-        const res = await api.event.get('/events');
+        // hits /api/events/
+        const res = await api.event.get('/');
         setEvents(res.data);
       } else if (activeTab === 'users') {
+        // hits /api/users/
         const res = await api.user.get('/');
         setUsers(res.data);
       } else if (activeTab === 'bookings') {
+        // hits /api/bookings/ and /api/events/
         const [bookingsRes, eventsRes] = await Promise.all([
-          api.booking.get('/bookings'),
-          api.event.get('/events')
+          api.booking.get('/'),
+          api.event.get('/')
         ]);
         setBookings(bookingsRes.data);
         setEvents(eventsRes.data);
@@ -41,21 +44,21 @@ const AdminDashboard = () => {
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
-    await api.event.post('/events', newEvent);
+    await api.event.post('/', newEvent);
     setNewEvent({ eventName: '', department: '', dateTime: '', venue: '', price: 0, totalTickets: 0, availableTickets: 0 });
     fetchData();
   };
 
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
-    await api.event.put(`/events/${editingEvent.id}`, editingEvent);
+    await api.event.put(`/${editingEvent.id}`, editingEvent);
     setEditingEvent(null);
     fetchData();
   };
 
   const handleDeleteEvent = async (id) => {
     if(window.confirm("CRITICAL: This will PERMANENTLY delete the event. Proceed?")) {
-      await api.event.delete(`/events/${id}`);
+      await api.event.delete(`/${id}`);
       fetchData();
     }
   };
@@ -69,7 +72,7 @@ const AdminDashboard = () => {
 
   const handleCancelBooking = async (id) => {
     if(window.confirm("ADMIN ACTION: Cancel this booking and notify user?")) {
-        await api.booking.delete(`/bookings/${id}`);
+        await api.booking.delete(`/${id}`);
         fetchData();
     }
   };

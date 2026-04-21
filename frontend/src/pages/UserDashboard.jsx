@@ -41,9 +41,12 @@ const UserDashboard = () => {
   const fetchData = async () => {
       try {
         const [bookingsRes, notifyRes, eventsRes] = await Promise.all([
-            api.booking.get(`/bookings/user/${user.id}`),
+            // hits /api/bookings/user/{id}
+            api.booking.get(`/user/${user.id}`),
+            // hits /api/users/{id}/notifications
             api.user.get(`/${user.id}/notifications`),
-            api.event.get(`/events`)
+            // hits /api/events/
+            api.event.get(`/`)
         ]);
         setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
         setNotifications(Array.isArray(notifyRes.data) ? notifyRes.data : []);
@@ -64,7 +67,7 @@ const UserDashboard = () => {
     try {
         const ids = JSON.parse(localStorage.getItem('wishlist') || '[]');
         if (ids.length > 0) {
-            const res = await api.event.get('/events');
+            const res = await api.event.get('/');
             setWishlistEvents(res.data.filter(e => ids.includes(e.id)));
         }
     } catch (e) {}
