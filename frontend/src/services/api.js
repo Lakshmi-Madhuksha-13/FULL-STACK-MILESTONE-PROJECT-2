@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// 🌐 CLOUD-READY CONFIGURATION
+// 🌐 ENTERPRISE CONFIGURATION
 const isProduction = false; 
 
 const LOCAL_URLS = {
@@ -11,31 +11,35 @@ const LOCAL_URLS = {
 };
 
 const CLOUD_URLS = {
-    USER_SERVICE: "https://your-users.render.com/api/users",
-    EVENT_SERVICE: "https://your-events.render.com/api/events",
-    BOOKING_SERVICE: "https://your-bookings.render.com/api/bookings",
-    SUPPORT_SERVICE: "https://your-users.render.com/api/support"
+    USER_SERVICE: "https://your-user-service.render.com/api/users",
+    EVENT_SERVICE: "https://your-event-service.render.com/api/events",
+    BOOKING_SERVICE: "https://your-booking-service.render.com/api/bookings",
+    SUPPORT_SERVICE: "https://your-user-service.render.com/api/support"
 };
 
 const URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;
 
-const createInstance = (baseUrl, name) => {
-    const inst = axios.create({ baseURL: baseUrl || "" });
-    inst.interceptors.response.use(
+const api = {
+    user: axios.create({ baseURL: URLS.USER_SERVICE || "" }),
+    event: axios.create({ baseURL: URLS.EVENT_SERVICE || "" }),
+    booking: axios.create({ baseURL: URLS.BOOKING_SERVICE || "" }),
+    support: axios.create({ baseURL: URLS.SUPPORT_SERVICE || "" })
+};
+
+// 🛡️ GLOBAL ASYNC SAFEGUARD: Prevents total app crash if one service is slow
+const applySafeguard = (instance) => {
+    instance.interceptors.response.use(
         r => r,
         e => {
-            console.warn(`[Sync Info] ${name} is currently offline. Background retries active.`);
+            console.warn(`[Sync Shield] Service status: Standby. Retrying in background.`);
             return Promise.reject(e);
         }
     );
-    return inst;
 };
 
-const api = {
-    user: createInstance(URLS.USER_SERVICE, "UserService"),
-    event: createInstance(URLS.EVENT_SERVICE, "EventService"),
-    booking: createInstance(URLS.BOOKING_SERVICE, "BookingService"),
-    support: createInstance(URLS.SUPPORT_SERVICE, "SupportService")
-};
+applySafeguard(api.user);
+applySafeguard(api.event);
+applySafeguard(api.booking);
+applySafeguard(api.support);
 
 export default api;

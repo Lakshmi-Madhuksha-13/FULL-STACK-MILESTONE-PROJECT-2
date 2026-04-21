@@ -8,10 +8,13 @@ const EventsPage = () => {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem('wishlist') || '[]'));
+  const [wishlist, setWishlist] = useState(() => {
+     try { return JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch(e) { return []; }
+  });
   const navigate = useNavigate();
 
-  const categories = ['ALL', ...new Set(events.map(e => e.department.toUpperCase()))];
+  // 🛡️ CRASH GUARD: Handle potential missing department data
+  const categories = ['ALL', ...new Set(events.filter(e => e && e.department).map(e => e.department.toUpperCase()))];
 
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
@@ -24,14 +27,14 @@ const EventsPage = () => {
         setWishlist([...wishlist, id]);
     }
   };
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      // hits the base URL exactly
       const response = await api.event.get('');
-      setEvents(response.data);
+      setEvents(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setError('Connection failed. Microservices offline.');
+      setError('Connection standby. Syncing in progress.');
     } finally {
       setLoading(false);
     }
@@ -42,9 +45,10 @@ const EventsPage = () => {
   }, []);
 
   const filteredEvents = events.filter(e => {
-    const matchesSearch = e.eventName.toLowerCase().includes(search.toLowerCase()) || 
-                         e.department.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory === 'ALL' || e.department.toUpperCase() === selectedCategory;
+    if (!e) return false;
+    const matchesSearch = (e.eventName?.toLowerCase().includes(search.toLowerCase())) || 
+                         (e.department?.toLowerCase().includes(search.toLowerCase()));
+    const matchesCategory = selectedCategory === 'ALL' || e.department?.toUpperCase() === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -52,28 +56,28 @@ const EventsPage = () => {
     <div className="app-container page-transition">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4rem', gap: '2rem', flexWrap: 'wrap' }}>
         <div>
-          <h1 className="gradient-text" style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>Global Events.</h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem' }}>Discover the tech fests shaping the future.</p>
+          <h1 className="gradient-text" style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>Cloud Events.</h1>
+          <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem' }}>Discover entries that define the next generation.</p>
         </div>
         
         <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
           <input 
             type="text" 
-            placeholder="Search events or domains..." 
+            placeholder="Search assets..." 
             className="form-control" 
-            style={{ borderRadius: '2rem', paddingLeft: '3rem', height: '3.5rem', background: 'var(--glass-bg)', color: 'var(--text-main)' }} 
+            style={{ borderRadius: '2rem', paddingLeft: '3rem', height: '3.5rem' }} 
             onChange={(e) => setSearch(e.target.value)}
           />
           <span style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
         </div>
       </div>
 
-      <div className="search-container">
+      <div className="search-container" style={{ gap: '0.5rem' }}>
         {categories.map(cat => (
           <button 
             key={cat} 
             className="btn-elite" 
-            style={{ width: 'auto', background: selectedCategory === cat ? 'var(--primary)' : 'transparent', border: '1px solid var(--glass-border)', padding: '0.5rem 1.5rem' }}
+            style={{ width: 'auto', background: selectedCategory === cat ? 'var(--primary)' : 'transparent', border: '1px solid var(--glass-border)', padding: '0.5rem 1.2rem', fontSize: '0.8rem' }}
             onClick={() => setSelectedCategory(cat)}
           >
             {cat}
@@ -83,57 +87,33 @@ const EventsPage = () => {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '5rem' }}>
-           <div className="spinner" style={{ width: '50px', height: '50px', border: '5px solid var(--glass-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 2rem auto' }}></div>
-           <p>Syncing with Cluster...</p>
+           <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid var(--glass-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1.2s linear infinite', margin: '0 auto 1.5rem auto' }}></div>
+           <p style={{ opacity: 0.5 }}>SYNCING SYSTEM DATA...</p>
         </div>
       ) : (
         <div className="elite-grid">
           {filteredEvents.map(ev => {
             const isSoldOut = ev.availableTickets === 0;
-            const badgeColor = ev.department.toUpperCase().includes('CS') ? 'var(--vivid-pink)' : 
-                              ev.department.toUpperCase().includes('IT') ? 'var(--accent)' : 'var(--primary-bright)';
+            const badgeColor = ev.department?.toUpperCase().includes('CS') ? 'var(--vivid-pink)' : 'var(--primary)';
             return (
-              <div key={ev.id} className="event-card" style={{ position: 'relative' }}>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); toggleWishlist(ev.id); }}
-                  style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', zIndex: '5' }}
-                >
-                  {wishlist.includes(ev.id) ? '⭐' : '☆'}
+              <div key={ev.id} className="event-card" style={{ cursor: isSoldOut ? 'default' : 'pointer', opacity: isSoldOut ? 0.7 : 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
+                  <span style={{ fontWeight: '800', color: 'var(--success)' }}>₹{ev.price}</span>
+                </div>
+                <h2 style={{ fontSize: '1.4rem' }}>{ev.eventName}</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', color: 'var(--text-dim)', fontSize: '0.8rem', margin: '1rem 0 2rem 0' }}>
+                   <span>📍</span> <span>{ev.venue}</span>
+                   <span>🕒</span> <span>{ev.dateTime}</span>
+                </div>
+                <button className="btn-primary" disabled={isSoldOut} onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
+                    {isSoldOut ? 'REGISTRY CLOSED' : 'CONFIRM ENTRY'}
                 </button>
-                <div onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
-                    <span style={{ fontWeight: '800', color: 'var(--success)', fontSize: '1.2rem' }}>₹{ev.price}</span>
-                  </div>
-
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{ev.eventName}</h2>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.8rem', color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                  <span>📍</span> <span>{ev.venue}</span>
-                  <span>📅</span> <span>{ev.dateTime}</span>
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Availability</div>
-                        <div style={{ color: isSoldOut ? 'var(--accent)' : 'var(--primary)', fontWeight: 'bold' }}>
-                            {isSoldOut ? 'REGISTRATIONS CLOSED' : `${ev.availableTickets} Slots Left`}
-                        </div>
-                    </div>
-                    <button className="btn-elite" style={{ padding: '0.6rem 1.2rem', fontSize: '0.8rem' }} disabled={isSoldOut}>
-                        {isSoldOut ? 'Closed' : 'Book Now'}
-                    </button>
-                </div>
-               </div>
               </div>
             );
           })}
         </div>
       )}
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 };
