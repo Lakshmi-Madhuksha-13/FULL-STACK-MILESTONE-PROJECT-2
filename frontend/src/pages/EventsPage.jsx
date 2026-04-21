@@ -21,6 +21,7 @@ const EventsPage = () => {
         setWishlist([...wishlist, id]);
     }
   };
+  const fetchEvents = async () => {
     try {
       setLoading(true);
       const response = await axios.get('http://localhost:8082/api/events');
@@ -104,6 +105,7 @@ const EventsPage = () => {
                         {isSoldOut ? 'Closed' : 'Book Now'}
                     </button>
                 </div>
+               </div>
               </div>
             );
           })}
