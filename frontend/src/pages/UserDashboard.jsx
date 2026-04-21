@@ -6,6 +6,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('bookings'); 
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -41,17 +42,24 @@ const UserDashboard = () => {
 
   const fetchData = async () => {
       try {
-        const [bookingsRes, notifyRes] = await Promise.all([
+        const [bookingsRes, notifyRes, eventsRes] = await Promise.all([
             axios.get(`http://localhost:8083/api/bookings/user/${user.id}`),
-            axios.get(`http://localhost:8081/api/users/${user.id}/notifications`)
+            axios.get(`http://localhost:8081/api/users/${user.id}/notifications`),
+            axios.get(`http://localhost:8082/api/events`)
         ]);
         setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
         setNotifications(Array.isArray(notifyRes.data) ? notifyRes.data : []);
+        setAllEvents(eventsRes.data);
       } catch (err) {
           console.error("Dashboard Sync Error:", err);
       } finally {
           setLoading(false);
       }
+  };
+
+  const getEventName = (id) => {
+    const ev = allEvents.find(e => e.id === id);
+    return ev ? ev.eventName : `Event #${id}`;
   };
 
   const fetchWishlist = async () => {
@@ -147,7 +155,7 @@ const UserDashboard = () => {
                         {bookings.map(b => (
                         <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             <td style={{ padding: '1rem' }}>#{b.id}</td>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>Official Fest</td>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>{getEventName(b.eventId)}</td>
                             <td style={{ padding: '1rem' }}>{b.ticketsBooked}</td>
                             <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
                             <td style={{ padding: '1rem' }}>
@@ -210,7 +218,7 @@ const UserDashboard = () => {
                   <div className="ticket-pass">
                     <div className="ticket-top">ENTRY AUTHORIZED</div>
                     <div className="ticket-body" style={{ textAlign: 'left', color: '#0f172a' }}>
-                        <h3 style={{ margin: '0 0 0.5rem 0' }}>OFFICIAL FEST</h3>
+                        <h3 style={{ margin: '0 0 0.5rem 0' }}>{getEventName(selectedBooking.eventId)}</h3>
                         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>TICKET ID: #TKT-{selectedBooking.id}</div>
                         <div style={{ fontSize: '0.75rem' }}>
                             <strong>Attendees:</strong>

@@ -22,12 +22,21 @@ const AdminDashboard = () => {
         const res = await axios.get('http://localhost:8081/api/users');
         setUsers(res.data);
       } else if (activeTab === 'bookings') {
-        const res = await axios.get('http://localhost:8083/api/bookings');
-        setBookings(res.data);
+        const [bookingsRes, eventsRes] = await Promise.all([
+          axios.get('http://localhost:8083/api/bookings'),
+          axios.get('http://localhost:8082/api/events')
+        ]);
+        setBookings(bookingsRes.data);
+        setEvents(eventsRes.data);
       }
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const getEventName = (id) => {
+    const event = events.find(e => e.id === id);
+    return event ? event.eventName : `Event #${id}`;
   };
 
   const handleAddEvent = async (e) => {
@@ -191,6 +200,7 @@ const AdminDashboard = () => {
                       <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                         <th style={{ padding: '1rem' }}>ID</th>
                         <th style={{ padding: '1rem' }}>User ID</th>
+                        <th style={{ padding: '1rem' }}>Event Name</th>
                         <th style={{ padding: '1rem' }}>Attendees</th>
                         <th style={{ padding: '1rem' }}>Tickets</th>
                         <th style={{ padding: '1rem' }}>Total</th>
@@ -203,7 +213,8 @@ const AdminDashboard = () => {
                         return (
                           <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             <td style={{ padding: '1rem' }}>#{b.id}</td>
-                            <td style={{ padding: '1rem' }}>{b.userId}</td>
+                            <td style={{ padding: '1rem' }}>User {b.userId}</td>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>{getEventName(b.eventId)}</td>
                             <td style={{ padding: '1rem', fontSize: '0.8rem' }}>
                               {attendees.map((a, i) => <div key={i} style={{ color: 'var(--text-dim)' }}>{i+1}. {a.name}</div>)}
                             </td>
