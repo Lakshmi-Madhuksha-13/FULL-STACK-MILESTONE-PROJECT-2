@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('events'); // events, users, bookings
+  const [activeTab, setActiveTab] = useState('events'); 
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -36,7 +36,7 @@ const AdminDashboard = () => {
 
   const getEventName = (id) => {
     const event = events.find(e => e.id === id);
-    return event ? event.eventName : 'Technical Fest';
+    return event ? event.eventName : `Event ID: ${id}`;
   };
 
   const handleAddEvent = async (e) => {
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteEvent = async (id) => {
-    if(window.confirm("CANCELLING EVENT: This will delete the event and notify all attendees. Proceed?")) {
+    if(window.confirm("CRITICAL: This will PERMANENTLY delete the event. Proceed?")) {
       await axios.delete(`http://localhost:8082/api/events/${id}`);
       fetchData();
     }
@@ -68,7 +68,7 @@ const AdminDashboard = () => {
   };
 
   const handleCancelBooking = async (id) => {
-    if(window.confirm("CANCEL BOOKING: Are you sure you want to cancel this booking? The user will be notified.")) {
+    if(window.confirm("ADMIN ACTION: Cancel this booking and notify user?")) {
         await axios.delete(`http://localhost:8083/api/bookings/${id}`);
         fetchData();
     }
@@ -79,9 +79,7 @@ const AdminDashboard = () => {
       if (!details) return [];
       const parsed = JSON.parse(details);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   };
 
   const [currentUser] = useState(() => {
@@ -91,88 +89,79 @@ const AdminDashboard = () => {
   });
   
   if (!currentUser || currentUser.role !== 'ADMIN') {
-    return <div className="app-container page-transition" style={{textAlign: 'center', color: 'var(--accent)', padding: '5rem'}}><h2>Access Denied</h2><p>Admin privileges required.</p></div>;
+    return <div className="app-container" style={{textAlign: 'center', padding: '5rem'}}><h2>Admin Access Denied</h2></div>;
   }
 
   return (
     <div className="app-container page-transition">
-      <h2 className="gradient-text">Admin Control Panel</h2>
+      <h2 className="gradient-text">Administrator Console</h2>
 
-      {/* Analytics Row */}
+      {/* Stats Board */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--success)' }}>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Total Revenue</div>
-            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--success)', marginTop: '0.5rem' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', fontWeight: 'bold' }}>TOTAL REVENUE GENERATED</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--success)' }}>
                 ₹{bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}
             </div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--primary)' }}>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Registrations</div>
-            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary)', marginTop: '0.5rem' }}>
-                {users.length}
-            </div>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', fontWeight: 'bold' }}>REGISTERED ENTRANTS</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary)' }}>{users.length}</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '1px solid var(--accent)' }}>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Tickets Sold</div>
-            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent)', marginTop: '0.5rem' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', fontWeight: 'bold' }}>TICKETS ISSUED</div>
+            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent)' }}>
                 {bookings.reduce((sum, b) => sum + (b.ticketsBooked || 0), 0)}
             </div>
         </div>
       </div>
       
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'events' ? 1 : 0.6 }} onClick={() => setActiveTab('events')}>Manage Events</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'users' ? 1 : 0.6 }} onClick={() => setActiveTab('users')}>Manage Users</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>All Bookings</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'events' ? 1 : 0.6 }} onClick={() => setActiveTab('events')}>System Events</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'users' ? 1 : 0.6 }} onClick={() => setActiveTab('users')}>User Registry</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>Booking Log</button>
       </div>
 
       <div className="glass-panel">
         {activeTab === 'events' && (
           <div>
             {editingEvent ? (
-              <div>
-                <h3 className="gradient-text" style={{ fontSize: '1.5rem' }}>Edit Event</h3>
-                <form onSubmit={handleUpdateEvent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-                  <input type="text" placeholder="Name" className="form-control" value={editingEvent.eventName} onChange={e => setEditingEvent({...editingEvent, eventName: e.target.value})} required/>
-                  <input type="text" placeholder="Department" className="form-control" value={editingEvent.department} onChange={e => setEditingEvent({...editingEvent, department: e.target.value})} />
-                  <input type="text" placeholder="Date/Time" className="form-control" value={editingEvent.dateTime} onChange={e => setEditingEvent({...editingEvent, dateTime: e.target.value})} />
-                  <input type="text" placeholder="Venue" className="form-control" value={editingEvent.venue} onChange={e => setEditingEvent({...editingEvent, venue: e.target.value})} />
-                  <input type="number" placeholder="Price" className="form-control" value={editingEvent.price} onChange={e => setEditingEvent({...editingEvent, price: parseFloat(e.target.value)})} />
-                  <input type="number" placeholder="Total Capacity" className="form-control" value={editingEvent.totalTickets} onChange={e => setEditingEvent({...editingEvent, totalTickets: parseInt(e.target.value)})} />
-                  <input type="number" placeholder="Available Tickets" className="form-control" value={editingEvent.availableTickets} onChange={e => setEditingEvent({...editingEvent, availableTickets: parseInt(e.target.value)})} />
+              <form onSubmit={handleUpdateEvent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                  <h3 className="gradient-text" style={{ gridColumn: 'span 2' }}>Modify Protocol</h3>
+                  <input type="text" className="form-control" value={editingEvent.eventName} onChange={e => setEditingEvent({...editingEvent, eventName: e.target.value})} required/>
+                  <input type="text" className="form-control" value={editingEvent.department} onChange={e => setEditingEvent({...editingEvent, department: e.target.value})} />
+                  <input type="text" className="form-control" value={editingEvent.dateTime} onChange={e => setEditingEvent({...editingEvent, dateTime: e.target.value})} />
+                  <input type="text" className="form-control" value={editingEvent.venue} onChange={e => setEditingEvent({...editingEvent, venue: e.target.value})} />
+                  <input type="number" className="form-control" value={editingEvent.price} onChange={e => setEditingEvent({...editingEvent, price: parseFloat(e.target.value)})} />
+                  <input type="number" className="form-control" value={editingEvent.totalTickets} onChange={e => setEditingEvent({...editingEvent, totalTickets: parseInt(e.target.value)})} />
                   <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem' }}>
-                    <button type="submit" className="btn-primary" style={{ background: 'var(--primary)' }}>Update & Notify</button>
-                    <button type="button" className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--glass-border)' }} onClick={() => setEditingEvent(null)}>Cancel</button>
+                    <button type="submit" className="btn-primary">Execute Update</button>
+                    <button type="button" className="btn-elite" style={{ background: 'transparent' }} onClick={() => setEditingEvent(null)}>Abort</button>
                   </div>
-                </form>
-              </div>
+              </form>
             ) : (
-              <div>
-                <h3 className="gradient-text" style={{ fontSize: '1.5rem' }}>Add New Event</h3>
-                <form onSubmit={handleAddEvent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-                  <input type="text" placeholder="Name" className="form-control" value={newEvent.eventName} onChange={e => setNewEvent({...newEvent, eventName: e.target.value})} required/>
+              <form onSubmit={handleAddEvent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                  <h3 className="gradient-text" style={{ gridColumn: 'span 2' }}>Initialize New Event</h3>
+                  <input type="text" placeholder="Event Code/Name" className="form-control" value={newEvent.eventName} onChange={e => setNewEvent({...newEvent, eventName: e.target.value})} required/>
                   <input type="text" placeholder="Department" className="form-control" value={newEvent.department} onChange={e => setNewEvent({...newEvent, department: e.target.value})} />
-                  <input type="text" placeholder="Date/Time" className="form-control" value={newEvent.dateTime} onChange={e => setNewEvent({...newEvent, dateTime: e.target.value})} />
+                  <input type="text" placeholder="Timestamp" className="form-control" value={newEvent.dateTime} onChange={e => setNewEvent({...newEvent, dateTime: e.target.value})} />
                   <input type="text" placeholder="Venue" className="form-control" value={newEvent.venue} onChange={e => setNewEvent({...newEvent, venue: e.target.value})} />
-                  <input type="number" placeholder="Price" className="form-control" value={newEvent.price} onChange={e => setNewEvent({...newEvent, price: parseFloat(e.target.value)})} />
-                  <input type="number" placeholder="Total Capacity" title="Total Tickets" className="form-control" value={newEvent.totalTickets} onChange={e => setNewEvent({...newEvent, totalTickets: parseInt(e.target.value)})} />
-                  <input type="number" placeholder="Available Tickets" title="Available Tickets" className="form-control" value={newEvent.availableTickets} onChange={e => setNewEvent({...newEvent, availableTickets: parseInt(e.target.value)})} />
-                  <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2' }}>Add Event</button>
-                </form>
-              </div>
+                  <input type="number" placeholder="Entry Price" className="form-control" value={newEvent.price} onChange={e => setNewEvent({...newEvent, price: parseFloat(e.target.value)})} />
+                  <input type="number" placeholder="Cap Limit" className="form-control" value={newEvent.totalTickets} onChange={e => setNewEvent({...newEvent, totalTickets: parseInt(e.target.value)})} />
+                  <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2' }}>Register Global Event</button>
+              </form>
             )}
 
-            <h3 className="gradient-text" style={{ fontSize: '1.5rem', marginTop: '3rem' }}>Existing Events</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {events.map(ev => (
-                <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px solid var(--glass-border)' }}>
+                <div key={ev.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.2rem', alignItems: 'center' }}>
                   <div>
-                    <strong style={{ display: 'block', color: 'var(--primary)', fontSize: '1.1rem' }}>{ev.eventName}</strong>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>{ev.venue} | {ev.totalTickets} Capacity | {ev.availableTickets} Left</span>
+                    <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>ID: #{ev.id} | {ev.eventName}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{ev.venue} | {ev.availableTickets} Slots Left</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => setEditingEvent(ev)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Edit</button>
-                    <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: 'var(--accent)', color: 'white', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Delete</button>
+                    <button onClick={() => setEditingEvent(ev)} className="btn-elite" style={{ padding: '0.4rem 1rem' }}>Edit</button>
+                    <button onClick={() => handleDeleteEvent(ev.id)} className="btn-elite" style={{ padding: '0.4rem 1rem', background: 'var(--accent)' }}>X</button>
                   </div>
                 </div>
               ))}
@@ -182,48 +171,59 @@ const AdminDashboard = () => {
 
         {activeTab === 'users' && (
           <div>
-            <h3 className="gradient-text">Registered Users</h3>
-            {Array.isArray(users) && users.map(u => (
-              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid var(--glass-border)', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-dim)' }}><strong style={{ color: 'var(--primary)' }}>[{u.role}]</strong> {u.name} ({u.email})</span>
-                {u.role !== 'ADMIN' && <button onClick={() => handleDeleteUser(u.id)} style={{ background: 'var(--accent)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer' }}>Delete</button>}
-              </div>
-            ))}
+            <h3 className="gradient-text">Global User Registry</h3>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+               <thead>
+                  <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                    <th style={{ padding: '1rem' }}>USER ID</th>
+                    <th style={{ padding: '1rem' }}>NAME</th>
+                    <th style={{ padding: '1rem' }}>ROLE</th>
+                    <th style={{ padding: '1rem' }}>ACTION</th>
+                  </tr>
+               </thead>
+               <tbody>
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td style={{ padding: '1rem' }}>USR-{u.id}</td>
+                    <td style={{ padding: '1rem' }}>{u.name} ({u.email})</td>
+                    <td style={{ padding: '1rem', color: u.role === 'ADMIN' ? 'var(--primary)' : 'var(--text-dim)' }}>{u.role}</td>
+                    <td style={{ padding: '1rem' }}>
+                        {u.role !== 'ADMIN' && <button onClick={() => handleDeleteUser(u.id)} style={{ background: 'var(--accent)', border: 'none', color: 'white', padding: '0.3rem 0.8rem', borderRadius: '4px' }}>Purge</button>}
+                    </td>
+                  </tr>
+                ))}
+               </tbody>
+            </table>
           </div>
         )}
 
         {activeTab === 'bookings' && (
           <div style={{ overflowX: 'auto' }}>
-            <h3 className="gradient-text">Global Booking Log</h3>
+            <h3 className="gradient-text">Booking Verification Log</h3>
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                        <th style={{ padding: '1rem' }}>Participant</th>
-                        <th style={{ padding: '1rem' }}>Event Name</th>
-                        <th style={{ padding: '1rem' }}>Attendees</th>
-                        <th style={{ padding: '1rem' }}>Tickets</th>
-                        <th style={{ padding: '1rem' }}>Total</th>
-                        <th style={{ padding: '1rem' }}>Actions</th>
+                        <th style={{ padding: '1rem' }}>BK ID</th>
+                        <th style={{ padding: '1rem' }}>USER</th>
+                        <th style={{ padding: '1rem' }}>EVENT NAME</th>
+                        <th style={{ padding: '1rem' }}>TICKETS</th>
+                        <th style={{ padding: '1rem' }}>REVENUE</th>
+                        <th style={{ padding: '1rem' }}>ADMIN</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Array.isArray(bookings) && bookings.map(b => {
-                        const attendees = parseAttendees(b.attendeeDetails);
-                        return (
-                          <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <td style={{ padding: '1rem' }}>User #{b.userId}</td>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>{getEventName(b.eventId)}</td>
-                            <td style={{ padding: '1rem', fontSize: '0.8rem' }}>
-                              {attendees.map((a, i) => <div key={i} style={{ color: 'var(--text-dim)' }}>{i+1}. {a.name}</div>)}
-                            </td>
-                            <td style={{ padding: '1rem' }}>{b.ticketsBooked}</td>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--success)' }}>₹{(typeof b.totalAmount === 'number' ? b.totalAmount : 0).toFixed(2)}</td>
-                            <td style={{ padding: '1rem' }}>
-                                <button className="btn-primary" style={{ width: 'auto', background: 'var(--accent)', padding: '0.4rem 1rem', fontSize: '0.8rem' }} onClick={() => handleCancelBooking(b.id)}>Cancel</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {bookings.map(b => (
+                        <tr key={b.id}>
+                          <td style={{ padding: '1rem' }}>#TF-{b.id}</td>
+                          <td style={{ padding: '1rem' }}>USR-{b.userId}</td>
+                          <td style={{ padding: '1rem', fontWeight: 'bold' }}>{getEventName(b.eventId)}</td>
+                          <td style={{ padding: '1rem' }}>{b.ticketsBooked}</td>
+                          <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
+                          <td style={{ padding: '1rem' }}>
+                              <button onClick={() => handleCancelBooking(b.id)} className="btn-elite" style={{ background: 'var(--accent)', padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>Revoke</button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
             </table>
           </div>
