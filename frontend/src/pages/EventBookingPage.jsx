@@ -46,33 +46,7 @@ const EventBookingPage = () => {
     fetchEvent(true); // Silent update of available tickets
   };
 
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pendingBookingData, setPendingBookingData] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('card');
-
-  const handleBookingStart = (data) => {
-    setPendingBookingData(data);
-    setShowPaymentModal(true);
-  };
-
-  const handleConfirmPayment = async () => {
-    setIsProcessing(true);
-    // Simulate payment bank gateway time
-    await new Promise(r => setTimeout(r, 2000));
-    
-    try {
-        const response = await axios.post('http://localhost:8083/api/bookings', pendingBookingData);
-        handleBookingSuccess(response.data);
-        setShowPaymentModal(false);
-    } catch (e) {
-        alert("Payment verification failed. Please try again.");
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  if (loading && !event) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Loading Event Details...</div>;
+  if (loading && !event) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Loading Event Facts...</div>;
   if (error) return <div className="app-container" style={{textAlign: 'center', color: 'var(--accent)', padding: '3rem'}}>{error}</div>;
   if (!event && !loading) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Event Not Found.</div>;
 
@@ -90,7 +64,7 @@ const EventBookingPage = () => {
           <div>
             {user ? (
                <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <BookingForm event={event} onBookingSuccess={handleBookingStart} user={user} />
+                  <BookingForm event={event} onBookingSuccess={handleBookingSuccess} user={user} />
                </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -103,60 +77,6 @@ const EventBookingPage = () => {
         </div>
       </div>
 
-      {/* Mock Payment Modal */}
-      {showPaymentModal && (
-        <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '450px' }}>
-                <h2 className="gradient-text">Select Payment Method</h2>
-                
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <button className="btn-primary" style={{ flex: 1, background: paymentMethod === 'card' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', opacity: 1 }} onClick={() => setPaymentMethod('card')}>💳 Card</button>
-                    <button className="btn-primary" style={{ flex: 1, background: paymentMethod === 'upi' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', opacity: 1 }} onClick={() => setPaymentMethod('upi')}>📱 UPI</button>
-                </div>
-
-                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.02)' }}>
-                    <p style={{ color: 'var(--text-dim)', marginBottom: '1rem', fontSize: '0.9rem' }}>Amount: <strong style={{ color: 'white' }}>₹{pendingBookingData?.totalAmount}</strong></p>
-                    
-                    {paymentMethod === 'card' ? (
-                        <>
-                            <div className="form-group">
-                                <label>Card Number</label>
-                                <input type="text" className="form-control" placeholder="4111 XXXX XXXX 1111" disabled={isProcessing}/>
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label>Expiry</label>
-                                    <input type="text" className="form-control" placeholder="MM/YY" disabled={isProcessing}/>
-                                </div>
-                                <div className="form-group">
-                                    <label>CVV</label>
-                                    <input type="password" className="form-control" placeholder="***" disabled={isProcessing}/>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'inline-block', marginBottom: '1rem' }}>
-                                <div className="qr-mock" style={{ width: '150px', height: '150px' }}></div>
-                            </div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Scan QR or enter VPA</p>
-                            <input type="text" className="form-control" style={{ textAlign: 'center' }} placeholder="student@okaxis" disabled={isProcessing}/>
-                        </div>
-                    )}
-                </div>
-
-                <button className="btn-primary" onClick={handleConfirmPayment} disabled={isProcessing}>
-                    {isProcessing ? 'Verifying Transaction...' : paymentMethod === 'card' ? 'Pay Securely' : 'I have Paid via UPI'}
-                </button>
-                {!isProcessing && (
-                    <button style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', marginTop: '1rem', width: '100%', cursor: 'pointer' }} onClick={() => setShowPaymentModal(false)}>
-                        Cancel
-                    </button>
-                )}
-            </div>
-        </div>
-      )}
-
       {/* Enhanced Success Modal */}
       {showSuccessModal && (
         <div className="modal-overlay">
@@ -167,13 +87,13 @@ const EventBookingPage = () => {
               
               <div className="ticket-pass">
                 <div className="ticket-top">OFFICIAL ENTRY PASS</div>
-                <div className="ticket-body" style={{ textAlign: 'left', color: '#1e293b' }}>
+                <div className="ticket-body" style={{ textAlign: 'left', color: '#0f172a' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{ticketSummary.eventName}</h4>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>ID: #TKT-{ticketSummary.id}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>ID: #TKT-{ticketSummary.id || 'TEMP'}</div>
                   
                   <div style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
                     <strong>Attendees:</strong>
-                    {ticketSummary.attendees.map((a, i) => <div key={i}>• {a.name}</div>)}
+                    {ticketSummary.attendees.map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
                   </div>
                 </div>
                 <div className="ticket-footer">
