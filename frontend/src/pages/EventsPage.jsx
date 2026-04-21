@@ -6,6 +6,7 @@ const EventsPage = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
   const fetchEvents = async () => {
@@ -13,9 +14,8 @@ const EventsPage = () => {
       setLoading(true);
       const response = await axios.get('http://localhost:8082/api/events');
       setEvents(response.data);
-      setError('');
     } catch (err) {
-      setError('Cannot connect to Event Service. Run MySQL & Microservices! ' + err.message);
+      setError('Connection failed. Microservices offline.');
     } finally {
       setLoading(false);
     }
@@ -25,67 +25,74 @@ const EventsPage = () => {
     fetchEvents();
   }, []);
 
+  const filteredEvents = events.filter(e => 
+    e.eventName.toLowerCase().includes(search.toLowerCase()) ||
+    e.department.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="app-container">
-      <header className="header" style={{ marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '3.5rem' }}>Discover Tech Fests</h1>
-        <p style={{ fontSize: '1.25rem' }}>Explore the top technical events happening across various domains.</p>
-      </header>
-
-      {error && <div className="glass-panel" style={{ color: 'var(--danger)', marginBottom: '2rem' }}>{error}</div>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4rem', gap: '2rem', flexWrap: 'wrap' }}>
+        <div>
+          <h1 className="gradient-text" style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>Global Events.</h1>
+          <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem' }}>Discover the tech fests shaping the future.</p>
+        </div>
+        
+        <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
+          <input 
+            type="text" 
+            placeholder="Search by event or domain..." 
+            className="form-control" 
+            style={{ borderRadius: '2rem', paddingLeft: '3rem', height: '3.5rem', background: 'rgba(255,255,255,0.05)' }} 
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <span style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+        </div>
+      </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>Loading Exciting Events...</div>
+        <div style={{ textAlign: 'center', padding: '5rem' }}>
+           <div className="spinner" style={{ width: '50px', height: '50px', border: '5px solid var(--glass-border)', borderTopColor: var(--primary), borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 2rem auto' }}></div>
+           <p>Syncing with Cluster...</p>
+        </div>
       ) : (
-        <>
-          <h2 style={{ marginBottom: '2rem', paddingLeft: '0.5rem', borderLeft: '4px solid var(--primary-color)' }}>
-             Upcoming Fests ({events.length})
-          </h2>
-
-          <div className="card-grid">
-            {events.map(ev => {
-              const ticketsSoldOut = ev.availableTickets === 0;
-              return (
-                <div 
-                  key={ev.id} 
-                  className="event-card" 
-                  onClick={() => navigate(`/book/${ev.id}`)}
-                  style={{ 
-                    cursor: ticketsSoldOut ? 'not-allowed' : 'pointer', 
-                    opacity: ticketsSoldOut ? 0.7 : 1
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                    <span className="badge">
-                      {ev.department}
-                    </span>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--success)' }}>
-                      ₹{ev.price}
-                    </span>
-                  </div>
-
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontSize: '1.4rem' }}>{ev.eventName}</h3>
-                  
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>📍 {ev.venue}</div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>📅 {ev.dateTime}</div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Capacity: {ev.totalTickets}</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 'bold', color: ticketsSoldOut ? 'var(--danger)' : 'var(--primary-color)' }}>
-                        {ticketsSoldOut ? 'SOLD OUT' : `${ev.availableTickets} Left`}
-                      </div>
-                    </div>
-                    <button className="btn-primary" style={{ width: 'auto', padding: '0.4rem 1rem' }} disabled={ticketsSoldOut}>
-                        Details
-                    </button>
-                  </div>
+        <div className="elite-grid">
+          {filteredEvents.map(ev => {
+            const isSoldOut = ev.availableTickets === 0;
+            return (
+              <div key={ev.id} className="event-card" onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <span className="innovative-badge">{ev.department}</span>
+                  <span style={{ fontWeight: '800', color: 'var(--success)', fontSize: '1.2rem' }}>₹{ev.price}</span>
                 </div>
-              );
-            })}
-          </div>
-        </>
+
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{ev.eventName}</h2>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.8rem', color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                  <span>📍</span> <span>{ev.venue}</span>
+                  <span>📅</span> <span>{ev.dateTime}</span>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Availability</div>
+                        <div style={{ color: isSoldOut ? 'var(--accent)' : 'var(--primary)', fontWeight: 'bold' }}>
+                            {isSoldOut ? 'REGISTRATIONS CLOSED' : `${ev.availableTickets} Slots Left`}
+                        </div>
+                    </div>
+                    <button className="btn-elite" style={{ padding: '0.6rem 1.2rem', fontSize: '0.8rem' }} disabled={isSoldOut}>
+                        {isSoldOut ? 'Closed' : 'Book Now'}
+                    </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 };
