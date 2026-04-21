@@ -77,4 +77,28 @@ public class UserController {
         });
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+        return userRepository.findById(id).map(user -> {
+            user.setName(userDetails.getName());
+            user.setDepartment(userDetails.getDepartment());
+            user.setCollege(userDetails.getCollege());
+            if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
+                user.setPassword(userDetails.getPassword());
+            }
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody java.util.Map<String, String> request) {
+        String email = request.get("email");
+        String newPassword = request.get("newPassword");
+        return userRepository.findByEmail(email).map(user -> {
+            user.setPassword(newPassword);
+            userRepository.save(user);
+            return ResponseEntity.ok("Password reset successfully");
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found"));
+    }
 }

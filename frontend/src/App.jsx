@@ -9,6 +9,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EventBookingPage from './pages/EventBookingPage';
 import EventsPage from './pages/EventsPage';
 import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/book/:id" element={<EventBookingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/profile" element={<Profile />} />
