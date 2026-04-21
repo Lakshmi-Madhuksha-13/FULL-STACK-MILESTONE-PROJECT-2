@@ -335,3 +335,35 @@ h1, h2, h3 {
 @media (max-width: 768px) {
   .elite-grid { grid-template-columns: 1fr; }
 }
+
+/* 📤 OFFICIAL DOCUMENT EXPORT SYSTEM */
+@media print {
+  body * { visibility: hidden; }
+  .modal-overlay, .modal-overlay * { visibility: visible; }
+  .modal-overlay { 
+    position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; 
+    background: white !important; backdrop-filter: none !important;
+  }
+  .modal-content { 
+    background: white !important; border: none !important; 
+    box-shadow: none !important; padding: 0 !important;
+    width: 100% !important; max-width: 100% !important;
+  }
+  .btn-primary, .btn-elite, .support-widget, .toast-interactive, button { display: none !important; }
+}
+
+.certificate-paper {
+  background: white;
+  color: #1e293b;
+  border: 20px solid #1e293b;
+  padding: 4rem;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 50px 100px rgba(0,0,0,0.4);
+}
+
+.ticket-header-print {
+  background: #0f172a !important;
+  color: white !important;
+  -webkit-print-color-adjust: exact;
+}
