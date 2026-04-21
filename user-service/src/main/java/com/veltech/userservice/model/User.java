@@ -14,15 +14,19 @@ public class User {
     private String email;
     private String password;
     private String role; // USER / ADMIN
+    private String department;
+    private String college;
 
     public User() {
     }
 
-    public User(String name, String email, String password, String role) {
+    public User(String name, String email, String password, String role, String department, String college) {
         this.name = name;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.department = department;
+        this.college = college;
     }
 
     public Long getId() { return id; }
@@ -39,4 +43,10 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getCollege() { return college; }
+    public void setCollege(String college) { this.college = college; }
 }

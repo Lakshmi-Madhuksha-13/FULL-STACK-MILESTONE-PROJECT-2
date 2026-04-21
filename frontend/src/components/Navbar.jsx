@@ -50,6 +50,7 @@ const Navbar = () => {
                                 Dashboard
                                 {unreadCount > 0 && <span className="notification-dot"></span>}
                             </Link>
+                            {user.role === 'USER' && <Link to="/profile" style={linkStyle}>Profile</Link>}
                             <button className="btn-elite" onClick={handleLogout} style={{ padding: '0.5rem 1.2rem', fontSize: '0.9rem', background: 'rgba(255,255,255,0.05)', boxShadow: 'none', border: '1px solid var(--glass-border)' }}>
                                 Logout
                             </button>

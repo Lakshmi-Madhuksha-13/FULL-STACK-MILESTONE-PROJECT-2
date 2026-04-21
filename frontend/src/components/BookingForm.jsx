@@ -3,7 +3,12 @@ import axios from 'axios';
 
 const BookingForm = ({ event, onBookingSuccess, user }) => {
   const [ticketCount, setTicketCount] = useState(1);
-  const [attendees, setAttendees] = useState([{ name: '', email: '', department: '' }]);
+  const [attendees, setAttendees] = useState([{ 
+    name: user?.name || '', 
+    email: user?.email || '', 
+    department: user?.department || '',
+    college: user?.college || ''
+  }]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -12,7 +17,7 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
     const count = parseInt(ticketCount) || 1;
     if (attendees.length < count) {
       const needed = count - attendees.length;
-      const newAttendees = Array(needed).fill(0).map(() => ({ name: '', email: '', department: '' }));
+      const newAttendees = Array(needed).fill(0).map(() => ({ name: '', email: '', department: '', college: user?.college || '' }));
       setAttendees([...attendees, ...newAttendees]);
     } else if (attendees.length > count) {
       setAttendees(attendees.slice(0, count));
@@ -27,14 +32,19 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
 
   const handleReset = () => {
     setTicketCount(1);
-    setAttendees([{ name: '', email: '', department: '' }]);
+    setAttendees([{ 
+        name: user?.name || '', 
+        email: user?.email || '', 
+        department: user?.department || '',
+        college: user?.college || ''
+    }]);
     setError('');
   };
 
   const validate = () => {
     for (let i = 0; i < attendees.length; i++) {
         const a = attendees[i];
-        if (!a.name || !a.email || !a.department) {
+        if (!a.name || !a.email || !a.department || !a.college) {
             return `Please fill all details for Attendee #${i + 1}`;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -123,6 +133,10 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
                   <label>Department</label>
                   <input type="text" className="form-control" value={attendee.department} onChange={(e) => handleAttendeeChange(index, 'department', e.target.value)} placeholder="e.g. CS" />
                 </div>
+              </div>
+              <div className="form-group">
+                <label>College Name</label>
+                <input type="text" className="form-control" value={attendee.college} onChange={(e) => handleAttendeeChange(index, 'college', e.target.value)} placeholder="University/College" />
               </div>
             </div>
           ))}

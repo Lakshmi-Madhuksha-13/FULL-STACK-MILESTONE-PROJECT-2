@@ -7,9 +7,20 @@ const EventsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem('wishlist') || '[]'));
   const navigate = useNavigate();
 
-  const fetchEvents = async () => {
+  useEffect(() => {
+    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  const toggleWishlist = (id) => {
+    if (wishlist.includes(id)) {
+        setWishlist(wishlist.filter(item => item !== id));
+    } else {
+        setWishlist([...wishlist, id]);
+    }
+  };
     try {
       setLoading(true);
       const response = await axios.get('http://localhost:8082/api/events');
@@ -62,11 +73,18 @@ const EventsPage = () => {
             const badgeColor = ev.department.toUpperCase().includes('CS') ? 'var(--vivid-pink)' : 
                               ev.department.toUpperCase().includes('IT') ? 'var(--accent)' : 'var(--primary-bright)';
             return (
-              <div key={ev.id} className="event-card" onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                  <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
-                  <span style={{ fontWeight: '800', color: 'var(--success)', fontSize: '1.2rem' }}>₹{ev.price}</span>
-                </div>
+              <div key={ev.id} className="event-card" style={{ position: 'relative' }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); toggleWishlist(ev.id); }}
+                  style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', zIndex: '5' }}
+                >
+                  {wishlist.includes(ev.id) ? '⭐' : '☆'}
+                </button>
+                <div onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
+                    <span style={{ fontWeight: '800', color: 'var(--success)', fontSize: '1.2rem' }}>₹{ev.price}</span>
+                  </div>
 
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{ev.eventName}</h2>
                 

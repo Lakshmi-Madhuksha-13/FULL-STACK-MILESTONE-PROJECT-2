@@ -8,6 +8,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import EventBookingPage from './pages/EventBookingPage';
 import EventsPage from './pages/EventsPage';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<UserDashboard />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </Router>

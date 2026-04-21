@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER', department: '', college: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -28,8 +28,8 @@ const Register = () => {
   };
 
   return (
-    <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '400px' }}>
+    <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '85vh' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '450px' }}>
         <h2 className="gradient-text" style={{ textAlign: 'center' }}>Registration</h2>
         
         {error && <div className="error-text" style={{ padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', marginBottom: '1rem' }}>{error}</div>}
@@ -38,6 +38,16 @@ const Register = () => {
           <div className="form-group">
             <label>Full Name</label>
             <input type="text" required className="form-control" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Department</label>
+                <input type="text" placeholder="e.g. CSE" className="form-control" onChange={(e) => setFormData({...formData, department: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>College Name</label>
+                <input type="text" placeholder="e.g. Vel Tech" className="form-control" onChange={(e) => setFormData({...formData, college: e.target.value})} />
+              </div>
           </div>
           <div className="form-group">
             <label>Email</label>
