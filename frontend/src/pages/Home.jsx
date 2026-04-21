@@ -5,7 +5,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="app-container">
+    <div className="app-container page-transition">
       {/* Hero Section */}
       <section style={{ textAlign: 'center', padding: '6rem 0 4rem 0' }}>
         <div style={{ display: 'inline-block', padding: '0.5rem 1rem', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid var(--primary)', borderRadius: '2rem', marginBottom: '2rem', fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)' }}>

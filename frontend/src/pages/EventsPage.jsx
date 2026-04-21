@@ -31,7 +31,7 @@ const EventsPage = () => {
   );
 
   return (
-    <div className="app-container">
+    <div className="app-container page-transition">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4rem', gap: '2rem', flexWrap: 'wrap' }}>
         <div>
           <h1 className="gradient-text" style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>Global Events.</h1>
@@ -52,17 +52,19 @@ const EventsPage = () => {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '5rem' }}>
-           <div className="spinner" style={{ width: '50px', height: '50px', border: '5px solid var(--glass-border)', borderTopColor: var(--primary), borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 2rem auto' }}></div>
+           <div className="spinner" style={{ width: '50px', height: '50px', border: '5px solid var(--glass-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 2rem auto' }}></div>
            <p>Syncing with Cluster...</p>
         </div>
       ) : (
         <div className="elite-grid">
           {filteredEvents.map(ev => {
             const isSoldOut = ev.availableTickets === 0;
+            const badgeColor = ev.department.toUpperCase().includes('CS') ? 'var(--vivid-pink)' : 
+                              ev.department.toUpperCase().includes('IT') ? 'var(--accent)' : 'var(--primary-bright)';
             return (
               <div key={ev.id} className="event-card" onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                  <span className="innovative-badge">{ev.department}</span>
+                  <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
                   <span style={{ fontWeight: '800', color: 'var(--success)', fontSize: '1.2rem' }}>₹{ev.price}</span>
                 </div>
 

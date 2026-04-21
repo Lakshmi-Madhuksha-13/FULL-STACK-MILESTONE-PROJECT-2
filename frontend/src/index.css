@@ -1,21 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
 
 :root {
-  --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.5);
-  --secondary: #a855f7;
-  --accent: #f43f5e;
-  --bg-deep: #020617;
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --text-main: #f8fafc;
-  --text-dim: #94a3b8;
+  --primary: #8b5cf6;
+  --primary-bright: #c084fc;
+  --secondary: #ec4899;
+  --accent: #06b6d4;
+  --vivid-pink: #f472b6;
+  --bg-deep: #0f172a;
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --text-main: #ffffff;
+  --text-dim: #cbd5e1;
   --success: #10b981;
-}
-
-* {
-  box-sizing: border-box;
-  scroll-behavior: smooth;
+  --warning: #f59e0b;
 }
 
 body {
@@ -24,12 +21,21 @@ body {
   background-color: var(--bg-deep);
   color: var(--text-main);
   min-height: 100vh;
-  overflow-x: hidden;
-  /* Premium Mesh Background */
+  /* More colorful mesh background */
   background-image: 
-    radial-gradient(at 100% 0%, hsla(263, 85%, 15%, 1) 0, transparent 40%),
-    radial-gradient(at 0% 100%, hsla(223, 85%, 10%, 1) 0, transparent 40%),
-    radial-gradient(at 50% 50%, hsla(243, 85%, 5%, 1) 0, transparent 100%);
+    radial-gradient(at 0% 0%, hsla(270, 70%, 20%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(190, 70%, 15%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(330, 70%, 15%, 1) 0, transparent 50%);
+}
+
+/* Page Transition Animation */
+.page-transition {
+  animation: slideInFromRight 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes slideInFromRight {
+  0% { opacity: 0; transform: translateX(50px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
 h1, h2, h3 {
@@ -38,11 +44,10 @@ h1, h2, h3 {
   letter-spacing: -0.02em;
 }
 
-.app-container {
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 2rem;
-  animation: pageFadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+.gradient-text {
+  background: linear-gradient(135deg, var(--vivid-pink) 0%, var(--primary-bright) 50%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Elite Glass Panel */
