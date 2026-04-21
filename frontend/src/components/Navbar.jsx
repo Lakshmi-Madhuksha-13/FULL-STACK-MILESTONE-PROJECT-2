@@ -64,6 +64,7 @@ const Navbar = () => {
                             <Link to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} style={{ ...navItem, background: 'rgba(139, 92, 246, 0.1)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
                                 {user.role === 'ADMIN' ? 'CONSOLE' : 'PORTAL'}
                             </Link>
+                            <Link to="/profile" style={{ ...navItem, padding: '0.5rem 1rem', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>PROFILE</Link>
                             <button className="btn-logout-elite" onClick={handleLogout}>LOGOUT</button>
                         </div>
                     ) : (

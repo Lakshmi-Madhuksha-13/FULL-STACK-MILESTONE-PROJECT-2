@@ -1,93 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const BookingForm = ({ event, onBookingSuccess, user }) => {
   const [ticketCount, setTicketCount] = useState(1);
-  const [attendees, setAttendees] = useState([{ 
-    name: user?.name || '', 
-    email: user?.email || '', 
+  const [attendees, setAttendees] = useState([{
+    name: user?.name || '',
+    email: user?.email || '',
     department: user?.department || '',
     college: user?.college || ''
   }]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync attendees array with ticket count
   useEffect(() => {
-    const count = parseInt(ticketCount) || 1;
-    if (attendees.length < count) {
-      const needed = count - attendees.length;
-      const newAttendees = Array(needed).fill(0).map(() => ({ name: '', email: '', department: '', college: user?.college || '' }));
-      setAttendees([...attendees, ...newAttendees]);
-    } else if (attendees.length > count) {
-      setAttendees(attendees.slice(0, count));
-    }
+    const count = Math.max(1, parseInt(ticketCount) || 1);
+    setAttendees(prev => {
+      if (prev.length < count) {
+        const add = Array(count - prev.length).fill(0).map(() => ({ name: '', email: '', department: '', college: user?.college || '' }));
+        return [...prev, ...add];
+      }
+      return prev.slice(0, count);
+    });
   }, [ticketCount]);
 
-  const handleAttendeeChange = (index, field, value) => {
-    const updatedAttendees = [...attendees];
-    updatedAttendees[index][field] = value;
-    setAttendees(updatedAttendees);
-  };
-
-  const handleReset = () => {
-    setTicketCount(1);
-    setAttendees([{ 
-        name: user?.name || '', 
-        email: user?.email || '', 
-        department: user?.department || '',
-        college: user?.college || ''
-    }]);
-    setError('');
+  const updateAttendee = (index, field, value) => {
+    setAttendees(prev => prev.map((a, i) => i === index ? { ...a, [field]: value } : a));
   };
 
   const validate = () => {
     for (let i = 0; i < attendees.length; i++) {
-        const a = attendees[i];
-        if (!a.name || !a.email || !a.department || !a.college) {
-            return `Please fill all details for Attendee #${i + 1}`;
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(a.email)) {
-            return `Invalid email format for Attendee #${i + 1}`;
-        }
+      const a = attendees[i];
+      if (!a.name.trim() || !a.email.trim()) return `Please fill Name and Email for Attendee #${i + 1}`;
+      if (!/\S+@\S+\.\S+/.test(a.email)) return `Invalid email for Attendee #${i + 1}`;
     }
-    if (ticketCount > event.availableTickets) {
-      return `Only ${event.availableTickets} tickets are available.`;
-    }
+    if (ticketCount > event.availableTickets) return `Only ${event.availableTickets} slots available.`;
     return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
+    const err = validate();
+    if (err) { setError(err); return; }
     setIsSubmitting(true);
+    setError('');
     try {
-      const bookingData = {
+      const res = await api.booking.post('', {
         userId: user.id,
         eventId: event.id,
         ticketsBooked: parseInt(ticketCount),
         totalAmount: ticketCount * event.price,
-        attendeeDetails: JSON.stringify(attendees) // Pass as JSON string to backend
-      };
-
-      const response = await axios.post('http://localhost:8083/api/bookings', bookingData);
-      
-      onBookingSuccess({
-        ...response.data,
-        eventName: event.eventName,
-        attendees: attendees // Keep original array for easier mapping in UI
+        attendeeDetails: JSON.stringify(attendees),
+        status: 'CONFIRMED'
       });
-      handleReset();
+      onBookingSuccess({ ...res.data, eventName: event.eventName, attendees });
     } catch (err) {
-      setError(err.response?.data || "Booking failed. Please check availability.");
+      setError(err.response?.data || 'Booking failed. Check availability.');
     } finally {
       setIsSubmitting(false);
     }
@@ -96,61 +63,66 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
   if (!event || event.availableTickets === 0) return null;
 
   return (
-    <div className="glass-panel">
-      <h2 style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-        Book Tickets
-      </h2>
+    <div className="glass-panel" style={{ padding: '2.5rem' }}>
+      <h2 className="gradient-text" style={{ marginBottom: '2rem', fontSize: '1.5rem' }}>Register Attendees</h2>
       <form onSubmit={handleSubmit}>
-        {error && <div className="error-text" style={{marginBottom: '1rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid var(--danger)'}}>{error}</div>}
-        
-        <div className="form-group">
-          <label>Number of Tickets</label>
-          <input 
-            type="number" 
-            className="form-control" 
-            value={ticketCount} 
-            onChange={(e) => setTicketCount(Math.max(1, parseInt(e.target.value) || 1))} 
-            min="1" max={event.availableTickets} 
+        {error && (
+          <div style={{ padding: '0.9rem 1.2rem', background: 'rgba(244,63,94,0.06)', borderLeft: '4px solid var(--accent)', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--vivid-pink)' }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={lbl}>NUMBER OF SLOTS</label>
+          <input type="number" className="form-control" value={ticketCount}
+            onChange={e => setTicketCount(Math.min(event.availableTickets, Math.max(1, parseInt(e.target.value) || 1)))}
+            min="1" max={event.availableTickets}
           />
+          <div style={{ fontSize: '0.7rem', opacity: 0.4, marginTop: '0.4rem' }}>{event.availableTickets} slots remaining</div>
         </div>
 
-        <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem', marginBottom: '1.5rem' }}>
-          {attendees.map((attendee, index) => (
-            <div key={index} style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--primary-color)' }}>Attendee #{index + 1}</h4>
-              <div className="form-group">
-                <label>Name</label>
-                <input type="text" className="form-control" value={attendee.name} onChange={(e) => handleAttendeeChange(index, 'name', e.target.value)} placeholder="Full Name" />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Email</label>
-                  <input type="email" className="form-control" value={attendee.email} onChange={(e) => handleAttendeeChange(index, 'email', e.target.value)} placeholder="Email ID" />
+        <div style={{ maxHeight: '420px', overflowY: 'auto', paddingRight: '0.4rem', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+          {attendees.map((a, i) => (
+            <div key={i} style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 900, opacity: 0.4, letterSpacing: '1.5px', marginBottom: '1rem' }}>SLOT #{i + 1}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={lbl}>FULL NAME *</label>
+                  <input type="text" className="form-control" value={a.name}
+                    onChange={e => updateAttendee(i, 'name', e.target.value)} placeholder="John Doe" />
                 </div>
-                <div className="form-group">
-                  <label>Department</label>
-                  <input type="text" className="form-control" value={attendee.department} onChange={(e) => handleAttendeeChange(index, 'department', e.target.value)} placeholder="e.g. CS" />
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={lbl}>EMAIL ADDRESS *</label>
+                  <input type="email" className="form-control" value={a.email}
+                    onChange={e => updateAttendee(i, 'email', e.target.value)} placeholder="name@college.edu" />
                 </div>
-              </div>
-              <div className="form-group">
-                <label>College Name</label>
-                <input type="text" className="form-control" value={attendee.college} onChange={(e) => handleAttendeeChange(index, 'college', e.target.value)} placeholder="University/College" />
+                <div>
+                  <label style={lbl}>DEPARTMENT</label>
+                  <input type="text" className="form-control" value={a.department}
+                    onChange={e => updateAttendee(i, 'department', e.target.value)} placeholder="e.g. CSE" />
+                </div>
+                <div>
+                  <label style={lbl}>COLLEGE</label>
+                  <input type="text" className="form-control" value={a.college}
+                    onChange={e => updateAttendee(i, 'college', e.target.value)} placeholder="University Name" />
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button type="submit" className="btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Processing...' : `Pay ₹${ticketCount * event.price}`}
-          </button>
-          <button type="button" onClick={handleReset} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--secondary-color)', color: 'var(--text-primary)' }}>
-            Reset
-          </button>
+        <div style={{ borderTop: '2px dashed var(--glass-border)', paddingTop: '1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ opacity: 0.6, fontSize: '0.9rem', fontWeight: 700 }}>TOTAL DUE</span>
+          <span style={{ fontSize: '2rem', fontWeight: 950, color: 'var(--success)' }}>₹{ticketCount * event.price}</span>
         </div>
+
+        <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ height: '56px', fontSize: '1rem' }}>
+          {isSubmitting ? 'PROCESSING TRANSACTION...' : `AUTHORIZE & PAY ₹${ticketCount * event.price}`}
+        </button>
       </form>
     </div>
   );
 };
 
+const lbl = { display: 'block', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-dim)', marginBottom: '0.4rem', letterSpacing: '1px' };
 export default BookingForm;

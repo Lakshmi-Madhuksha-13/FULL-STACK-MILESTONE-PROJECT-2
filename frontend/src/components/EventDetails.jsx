@@ -1,75 +1,65 @@
 import React from 'react';
 
 const EventDetails = ({ event }) => {
-  if (!event) return <div className="glass-panel">Loading events...</div>;
+  if (!event) return (
+    <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', opacity: 0.4 }}>
+      Connecting to cloud edge...
+    </div>
+  );
 
-  // Mock community data - can be made dynamic later
-  const ratings = {
-    'Coding Challenge': { stars: 4.8, count: 124 },
-    'Web Design': { stars: 4.5, count: 86 },
-    'Robotics': { stars: 4.9, count: 210 },
-    'Hackathon': { stars: 5.0, count: 540 }
-  };
-
-  const getStats = (name) => ratings[name] || { stars: 4.6, count: 42 };
-  const { stars, count } = getStats(event.eventName);
+  const stars = 4.6;
+  const reviewCount = 42 + (event.id || 0) * 7;
+  const filledStars = Math.floor(stars);
 
   return (
-    <div className="glass-panel">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <h2 style={{ marginBottom: '1rem', color: 'var(--text-main)' }}>Festival Briefing</h2>
-        <div style={{ textAlign: 'right' }}>
-            <div className="rating-stars" style={{ color: '#fbbf24' }}>{'★'.repeat(Math.floor(stars))}{'☆'.repeat(5-Math.floor(stars))}</div>
-            <small style={{ color: 'var(--text-dim)' }}>{stars} / 5.0 ({count} reviews)</small>
+    <div className="glass-panel" style={{ padding: '2.5rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <span className="innovative-badge" style={{ background: 'var(--primary)' }}>{event.department || 'GENERAL'}</span>
+          <span className="innovative-badge" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)', color: 'var(--text-main)' }}>✅ Verified</span>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ color: '#fbbf24', fontSize: '1rem', letterSpacing: '2px' }}>
+            {'★'.repeat(filledStars)}{'☆'.repeat(5 - filledStars)}
+          </div>
+          <small style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>{stars}/5 ({reviewCount} reviews)</small>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginTop: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <span className="innovative-badge" style={{ background: 'var(--primary)' }}>{event.department}</span>
-          <span className="innovative-badge" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--text-main)' }}>Verified Organizers</span>
-        </div>
+      {/* Event Name */}
+      <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px', marginBottom: '2rem', lineHeight: 1.1 }}>{event.eventName}</h2>
 
-        <h3 style={{ fontSize: '2.2rem', margin: 0, color: 'var(--text-main)', letterSpacing: '-1px' }}>{event.eventName}</h3>
-        
-        <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', display: 'flex', gap: '2rem' }}>
-          <div>
-            <small style={{ color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '800' }}>Venue</small>
-            <div style={{ fontWeight: '600' }}>{event.venue}</div>
+      {/* Meta Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem', marginBottom: '2rem' }}>
+        {[
+          { icon: '📍', label: 'VENUE', value: event.venue || 'To Be Announced' },
+          { icon: '🕒', label: 'SCHEDULE', value: event.dateTime || 'TBD' },
+          { icon: '💎', label: 'ENTRY FEE', value: `₹${(event.price || 0).toLocaleString()}`, color: 'var(--success)' },
+          { icon: '🎟️', label: 'SLOTS OPEN', value: event.availableTickets, color: event.availableTickets < 10 ? 'var(--accent)' : 'var(--primary)' },
+        ].map(({ icon, label, value, color }) => (
+          <div key={label} style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 900, opacity: 0.4, letterSpacing: '1.5px', marginBottom: '0.4rem' }}>{icon} {label}</div>
+            <div style={{ fontWeight: 900, fontSize: '1rem', color: color || 'var(--text-main)' }}>{value}</div>
           </div>
-          <div>
-            <small style={{ color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '800' }}>Schedule</small>
-            <div style={{ fontWeight: '600' }}>{event.dateTime}</div>
-          </div>
-        </div>
-
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-            Join us for an electrifying day of technical innovation. Experience hands-on workshops, 
-            high-stakes competitions, and network with industry pioneers in {event.department}.
-        </p>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1.5rem', background: 'var(--glass-bg)', borderRadius: '1rem', border: '1px solid var(--glass-border)' }}>
-          <div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', fontWeight: 'bold' }}>ENTRY FEE</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--success)' }}>
-               ₹{(typeof event.price === 'number' ? event.price : 0).toLocaleString()}
-            </span>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', fontWeight: 'bold' }}>SLOTS OPEN</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: '800', color: event.availableTickets > 5 ? 'var(--primary)' : 'var(--accent)' }}>
-              {event.availableTickets}
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Community Review Ticker */}
-      <div style={{ marginTop: '2rem', padding: '1rem', borderTop: '1px solid var(--glass-border)' }}>
-          <small style={{ color: 'var(--text-dim)', fontWeight: 'bold' }}>COMMUNITY BUZZ</small>
-          <div style={{ fontStyle: 'italic', color: 'var(--text-main)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              "The most anticipated {event.department} event of the year!" - Previous Participant
-          </div>
+      {/* Description */}
+      <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '2rem' }}>
+        Join us for an electrifying showcase of technical excellence. Compete alongside the brightest minds
+        in <strong style={{ color: 'var(--primary)' }}>{event.department || 'engineering'}</strong>, attend
+        hands-on workshops, and network with industry pioneers. This is a career-defining opportunity
+        you cannot miss.
+      </p>
+
+      {/* Community Buzz */}
+      <div style={{ padding: '1.2rem', background: 'rgba(139,92,246,0.05)', borderRadius: '12px', border: '1px solid rgba(139,92,246,0.2)' }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.5, letterSpacing: '1.5px', marginBottom: '0.6rem' }}>💬 COMMUNITY BUZZ</div>
+        <div style={{ fontStyle: 'italic', fontSize: '0.85rem', opacity: 0.75, lineHeight: 1.5 }}>
+          "The most anticipated {event.department || 'technical'} event of the year — absolutely worth every rupee!"
+        </div>
+        <div style={{ fontSize: '0.65rem', opacity: 0.35, marginTop: '0.5rem' }}>— Verified Participant</div>
       </div>
     </div>
   );
