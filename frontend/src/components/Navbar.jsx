@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 const Navbar = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -13,6 +14,7 @@ const Navbar = () => {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
+    // Live Session Detector: Runs whenever the URL changes
     useEffect(() => {
         const stored = localStorage.getItem('currentUser');
         if (stored) {
@@ -22,16 +24,16 @@ const Navbar = () => {
             if (parsed.role === 'USER') {
                 const fetchNotifications = async () => {
                     try {
-                        const res = await axios.get(`http://localhost:8081/api/users/${parsed.id}/notifications`);
+                        const res = await api.user.get(`/${parsed.id}/notifications`);
                         setUnreadCount(res.data.filter(n => !n.read).length);
                     } catch (e) {}
                 };
                 fetchNotifications();
-                const interval = setInterval(fetchNotifications, 10000);
-                return () => clearInterval(interval);
             }
+        } else {
+            setUser(null);
         }
-    }, []);
+    }, [location]); 
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
