@@ -1,8 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+        try {
+            const res = await axios.get('http://localhost:8082/api/events');
+            const deptStats = {};
+            res.data.forEach(ev => {
+                const dept = ev.department.toUpperCase();
+                deptStats[dept] = (deptStats[dept] || 0) + (ev.totalTickets - ev.availableTickets);
+            });
+            const sorted = Object.entries(deptStats)
+                .sort((a,b) => b[1] - a[1])
+                .slice(0, 3);
+            setStats(sorted);
+        } catch (e) {}
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="app-container page-transition">
@@ -29,12 +49,31 @@ const Home = () => {
       </section>
 
       {/* Innovation: Live Ticker */}
-      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '2rem 0', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '4rem 0' }}>
-        <div style={{ display: 'inline-block', animation: 'ticker 30s linear infinite', fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-dim)' }}>
+      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '1.5rem 0', background: 'var(--glass-bg)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '4rem 0' }}>
+        <div style={{ display: 'inline-block', animation: 'ticker 30s linear infinite', fontSize: '1rem', fontWeight: '800', color: 'var(--text-dim)', letterSpacing: '1px' }}>
           <span style={{ margin: '0 3rem' }}>🔥 IIT MADRAS SHASTRATA REGISTRATIONS OPEN</span>
           <span style={{ margin: '0 3rem' }}>⚡ TECHNOVA 2026 TICKETS SELLING FAST</span>
           <span style={{ margin: '0 3rem' }}>💎 NEW EVENT ADDED: WEB3 MASTERCLASS</span>
+          <span style={{ margin: '0 3rem' }}>🚀 CLOUD SUMMIT 2026 NOW TRENDING</span>
         </div>
+      </div>
+
+      {/* Live Stats: Leaderboard */}
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2 className="gradient-text" style={{ fontSize: '2.5rem' }}>Pulse of the Fest.</h2>
+          <p style={{ color: 'var(--text-dim)', marginBottom: '3rem' }}>Live department-wise registration leaderboard.</p>
+          <div className="leaderboard-container" style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+            {stats.length > 0 ? stats.map(([dept, count], i) => (
+                <div key={dept} className="stat-card" style={{ flex: '1', maxWidth: '300px' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'}</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{dept}</h3>
+                    <div style={{ fontSize: '2rem', fontWeight: '800' }}>{count}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Bookings Confirmed</div>
+                </div>
+            )) : (
+                <div style={{ color: 'var(--text-dim)', opacity: 0.5 }}>Syncing live analytics...</div>
+            )}
+          </div>
       </div>
 
       {/* Features Grid */}

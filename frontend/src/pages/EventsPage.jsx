@@ -7,8 +7,11 @@ const EventsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem('wishlist') || '[]'));
   const navigate = useNavigate();
+
+  const categories = ['ALL', ...new Set(events.map(e => e.department.toUpperCase()))];
 
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
@@ -37,10 +40,12 @@ const EventsPage = () => {
     fetchEvents();
   }, []);
 
-  const filteredEvents = events.filter(e => 
-    e.eventName.toLowerCase().includes(search.toLowerCase()) ||
-    e.department.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredEvents = events.filter(e => {
+    const matchesSearch = e.eventName.toLowerCase().includes(search.toLowerCase()) || 
+                         e.department.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === 'ALL' || e.department.toUpperCase() === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="app-container page-transition">
@@ -53,13 +58,26 @@ const EventsPage = () => {
         <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
           <input 
             type="text" 
-            placeholder="Search by event or domain..." 
+            placeholder="Search events or domains..." 
             className="form-control" 
-            style={{ borderRadius: '2rem', paddingLeft: '3rem', height: '3.5rem', background: 'rgba(255,255,255,0.05)' }} 
+            style={{ borderRadius: '2rem', paddingLeft: '3rem', height: '3.5rem', background: 'var(--glass-bg)', color: 'var(--text-main)' }} 
             onChange={(e) => setSearch(e.target.value)}
           />
           <span style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
         </div>
+      </div>
+
+      <div className="search-container">
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            className="btn-elite" 
+            style={{ width: 'auto', background: selectedCategory === cat ? 'var(--primary)' : 'transparent', border: '1px solid var(--glass-border)', padding: '0.5rem 1.5rem' }}
+            onClick={() => setSelectedCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       {loading ? (

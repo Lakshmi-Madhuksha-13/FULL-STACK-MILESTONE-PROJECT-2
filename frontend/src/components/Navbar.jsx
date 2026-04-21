@@ -6,6 +6,12 @@ const Navbar = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
 
     useEffect(() => {
         const stored = localStorage.getItem('currentUser');
@@ -27,22 +33,27 @@ const Navbar = () => {
         }
     }, []);
 
+    const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
     const handleLogout = () => {
         localStorage.removeItem('currentUser');
         window.location.href = '/login';
     };
 
     return (
-        <nav style={{ position: 'sticky', top: '0', zIndex: '100', background: 'rgba(2, 6, 23, 0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--glass-border)', padding: '1rem 0' }}>
+        <nav style={{ position: 'sticky', top: '0', zIndex: '100', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--glass-border)', padding: '1rem 0' }}>
             <div className="app-container" style={{ padding: '0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.5rem', boxShadow: '0 0 15px var(--primary-glow)' }}>&nbsp;T</div>
-                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', letterSpacing: '-1px' }}>TechFest<span style={{ color: 'var(--primary)' }}>.</span></span>
+                    <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.5rem', boxShadow: '0 0 15px var(--primary-bright)', color: 'white' }}>T</div>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px' }}>TechFest<span style={{ color: 'var(--primary)' }}>.</span></span>
                 </Link>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
-                    <Link to="/" style={linkStyle}>Home</Link>
-                    <Link to="/events" style={linkStyle}>Events</Link>
+                    <button onClick={toggleTheme} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-main)' }}>
+                        {theme === 'dark' ? '☀️' : '🌙'}
+                    </button>
+                    <Link to="/" style={{...linkStyle, color: 'var(--text-main)'}}>Home</Link>
+                    <Link to="/events" style={{...linkStyle, color: 'var(--text-main)'}}>Events</Link>
                     
                     {user ? (
                         <>

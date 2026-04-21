@@ -12,6 +12,7 @@ const UserDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [wishlistEvents, setWishlistEvents] = useState([]);
   const [countdown, setCountdown] = useState('');
+  const [showCertificate, setShowCertificate] = useState(false);
 
   const [user] = useState(() => {
     try {
@@ -81,6 +82,17 @@ const UserDashboard = () => {
     setCountdown(`${days}d ${hours}h ${mins}m ${secs}s`);
   };
 
+  const handleExportCalendar = (b) => {
+    const evName = getEventName(b.eventId);
+    const content = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${evName}\nDESCRIPTION:Official entry pass for ${evName}\nDTSTART:20260425T090000Z\nDTEND:20260425T170000Z\nEND:VEVENT\nEND:VCALENDAR`;
+    const blob = new Blob([content], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${evName.replace(/\s+/g, '_')}_Schedule.ics`;
+    link.click();
+  };
+
   const markAsRead = async (id) => {
     await axios.put(`http://localhost:8081/api/users/notifications/${id}/read`);
     fetchData();
@@ -136,8 +148,9 @@ const UserDashboard = () => {
                         <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>{getEventName(b.eventId)}</td>
                         <td style={{ padding: '1rem' }}>{b.ticketsBooked} Slot(s)</td>
                         <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
-                        <td style={{ padding: '1rem' }}>
-                            <button className="btn-elite" onClick={() => setSelectedBooking(b)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto' }}>View Pass 🎫</button>
+                        <td style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn-elite" onClick={() => setSelectedBooking(b)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto' }}>View Pass</button>
+                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(true); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto', background: 'var(--accent)' }}>Certificate</button>
                         </td>
                     </tr>
                     ))}
@@ -177,45 +190,70 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* REAL TICKET VIEW MODAL */}
+      {/* DUAL MODAL: TICKET OR CERTIFICATE */}
       {selectedBooking && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{ maxWidth: '420px', background: 'transparent', border: 'none' }}>
-                <div className="real-ticket">
-                  <div className="ticket-header">
-                    <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>SECURE ACCESS PASS</div>
-                    <h3 style={{ margin: 0 }}>{getEventName(selectedBooking.eventId)}</h3>
-                    <div className="status-badge-verified" style={{ marginTop: '0.8rem', display: 'inline-block' }}>BOOKED ✅</div>
-                  </div>
-                  <div className="ticket-cut ticket-cut-left"></div>
-                  <div className="ticket-cut ticket-cut-right"></div>
-                  <div className="ticket-details">
-                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <div>
-                            <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
+              <div className="modal-content" style={{ maxWidth: showCertificate ? '700px' : '420px', background: 'transparent', border: 'none' }}>
+                
+                {showCertificate ? (
+                    <div className="certificate-paper page-transition">
+                        <div style={{ border: '2px solid #1e293b', padding: '2rem' }}>
+                            <h1 style={{ fontSize: '2.5rem', color: 'var(--primary)', margin: 0 }}>CERTIFICATE</h1>
+                            <p style={{ letterSpacing: '3px', fontWeight: 'bold' }}>OF PARTICIPATION</p>
+                            <div style={{ margin: '2rem 0' }}>
+                                <p>This is to certify that</p>
+                                <h2 style={{ fontSize: '2rem', textDecoration: 'underline' }}>{user.name}</h2>
+                                <p>successfully participated in</p>
+                                <h3 style={{ color: 'var(--secondary)' }}>{getEventName(selectedBooking.eventId).toUpperCase()}</h3>
+                            </div>
+                            <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>Issued on: {new Date().toLocaleDateString()}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3rem' }}>
+                                <div style={{ borderTop: '1px solid #000', width: '150px' }}>Registrar</div>
+                                <div style={{ borderTop: '1px solid #000', width: '150px' }}>Event Head</div>
+                            </div>
                         </div>
-                        <div>
-                            <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>USER ID</small>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>USR-{selectedBooking.userId}</div>
+                    </div>
+                ) : (
+                    <div className="real-ticket">
+                    <div className="ticket-header">
+                        <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>SECURE ACCESS PASS</div>
+                        <h3 style={{ margin: 0 }}>{getEventName(selectedBooking.eventId)}</h3>
+                        <div className="status-badge-verified" style={{ marginTop: '0.8rem', display: 'inline-block' }}>BOOKED ✅</div>
+                    </div>
+                    <div className="ticket-cut ticket-cut-left"></div>
+                    <div className="ticket-cut ticket-cut-right"></div>
+                    <div className="ticket-details">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
+                            </div>
+                            <div>
+                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>USER ID</small>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>USR-{selectedBooking.userId}</div>
+                            </div>
                         </div>
-                     </div>
-                     <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ATTENDEES</small>
-                     <div style={{ fontSize: '0.8rem' }}>
-                        {parseAttendees(selectedBooking.attendeeDetails).map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
-                     </div>
-                  </div>
-                  <div className="real-qr-container">
-                     <div className="qr-frame">
-                        <img className="qr-image" 
-                             src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VERIFY_BK_${selectedBooking.id}`} 
-                             alt="QR Code" />
-                     </div>
-                  </div>
-                </div>
+                        <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ATTENDEES</small>
+                        <div style={{ fontSize: '0.8rem' }}>
+                            {parseAttendees(selectedBooking.attendeeDetails).map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
+                        </div>
+                    </div>
+                    <div className="real-qr-container">
+                        <div className="qr-frame">
+                            <img className="qr-image" 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VERIFY_BK_${selectedBooking.id}`} 
+                                alt="QR Code" />
+                        </div>
+                    </div>
+                    </div>
+                )}
+
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                    <button className="btn-primary" onClick={() => setSelectedBooking(null)}>Close Ticket</button>
-                    <button className="btn-elite" style={{ marginTop: '0.5rem', background: 'transparent' }} onClick={() => window.print()}>Save as PDF</button>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                        <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync to Calendar</button>
+                        <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ {showCertificate ? 'Print Certificate' : 'Print Ticket'}</button>
+                    </div>
+                    <button className="btn-primary" style={{ background: 'transparent', border: '1px solid white' }} onClick={() => { setSelectedBooking(null); setShowCertificate(false); }}>Close</button>
                 </div>
               </div>
           </div>
