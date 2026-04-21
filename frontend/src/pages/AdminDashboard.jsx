@@ -199,7 +199,7 @@ const AdminDashboard = () => {
                     <tbody>
                         {bookings.map(b => (
                             <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                <td style={{ padding: '1.2rem' }}>#TF}-{b.id}</td>
+                                <td style={{ padding: '1.2rem' }}>#TF-{b.id}</td>
                                 <td style={{ padding: '1.2rem' }}>{events.find(e => e.id === b.eventId)?.eventName || b.eventId}</td>
                                 <td style={{ padding: '1.2rem', color: 'var(--success)' }}>₹{b.totalAmount}</td>
                                 <td style={{ padding: '1.2rem' }}><button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => { if(window.confirm("Void?")) api.booking.delete(`/${b.id}`).then(fetchAllData); }}>VOID</button></td>
