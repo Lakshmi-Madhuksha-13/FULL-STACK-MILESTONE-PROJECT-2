@@ -15,6 +15,11 @@ const UserDashboard = () => {
   const [showCertificate, setShowCertificate] = useState(false);
   const [status, setStatus] = useState({ bookings: 'loading', notifications: 'loading', events: 'loading' });
 
+  // Floating Support Chat States
+  const [showChat, setShowChat] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [userMsg, setUserMsg] = useState('');
+
   const [user] = useState(() => {
     try {
       const stored = localStorage.getItem('currentUser');
@@ -29,6 +34,14 @@ const UserDashboard = () => {
       return () => clearInterval(interval);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (user && showChat) {
+        fetchChat();
+        const chatInterval = setInterval(fetchChat, 5000);
+        return () => clearInterval(chatInterval);
+    }
+  }, [user, showChat]);
 
   useEffect(() => {
     if (user) {
@@ -60,6 +73,21 @@ const UserDashboard = () => {
     setLoading(false);
   };
 
+  const fetchChat = async () => {
+    try {
+        const res = await api.support.get(`/history/${user.id}`);
+        setChatHistory(res.data);
+    } catch (e) {}
+  };
+
+  const handleSendMessage = async () => {
+    if (!userMsg.trim()) return;
+    const msg = { userId: user.id, senderName: user.name, message: userMsg, type: 'USER' };
+    await api.support.post('/send', msg);
+    setUserMsg('');
+    fetchChat();
+  };
+
   const getEventName = (id) => {
     const ev = allEvents.find(e => e.id === id);
     return ev ? ev.eventName : `Event #${id}`;
@@ -80,8 +108,6 @@ const UserDashboard = () => {
         setCountdown({ text: 'No Upcoming Events', target: null });
         return;
     }
-
-    // Find the dates of all booked events
     const eventDates = bookings.map(b => {
         const ev = allEvents.find(e => e.id === b.eventId);
         if (!ev) return null;
@@ -93,20 +119,13 @@ const UserDashboard = () => {
         setCountdown({ text: 'Events Completed!', target: 'All Completed' });
         return;
     }
-
-    // Sort to find the closest one
     const closest = eventDates.sort((a, b) => a.date - b.date)[0];
     const diff = closest.date - new Date();
-
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const mins = Math.floor((diff / 1000 / 60) % 60);
     const secs = Math.floor((diff / 1000) % 60);
-
-    setCountdown({ 
-        text: `${days}d ${hours}h ${mins}m ${secs}s`, 
-        target: closest.name 
-    });
+    setCountdown({ text: `${days}d ${hours}h ${mins}m ${secs}s`, target: closest.name });
   };
 
   const handleExportCalendar = (b) => {
@@ -168,7 +187,6 @@ const UserDashboard = () => {
                 <h2 className="gradient-text">Ticket Inventory & Certificates</h2>
                 {status.bookings === 'offline' && <small style={{ color: 'var(--accent)' }}>Trying to connect to system...</small>}
             </div>
-            
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '1rem' }}>
                 <thead style={{ borderBottom: '1px solid var(--glass-border)' }}>
@@ -232,27 +250,48 @@ const UserDashboard = () => {
         )}
       </div>
 
+      {/* SUPPORT CHAT BUBBLE */}
+      <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '1000' }}>
+            {showChat ? (
+                <div className="glass-panel page-transition" style={{ width: '350px', height: '450px', display: 'flex', flexDirection: 'column', padding: '1rem', border: '1px solid var(--primary)', background: '#0f172a' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
+                        <strong style={{ color: 'var(--primary)' }}>Fest Support Line</strong>
+                        <button onClick={() => setShowChat(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>✖</button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingRight: '0.5rem' }}>
+                        {chatHistory.map((m, i) => (
+                            <div key={i} style={{ alignSelf: m.type === 'USER' ? 'flex-end' : 'flex-start', background: m.type === 'USER' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.6rem 1rem', borderRadius: '1rem', maxWidth: '80%', fontSize: '0.85rem' }}>
+                                {m.message}
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                        <input type="text" className="form-control" placeholder="Ask a doubt..." value={userMsg} onChange={(e) => setUserMsg(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
+                        <button className="btn-primary" style={{ width: '60px' }} onClick={handleSendMessage}>➤</button>
+                    </div>
+                </div>
+            ) : (
+                <button className="btn-primary" onClick={() => setShowChat(true)} style={{ width: '60px', height: '60px', borderRadius: '50%', fontSize: '1.5rem', boxShadow: '0 0 20px var(--primary-bright)' }}>💬</button>
+            )}
+      </div>
+
       {/* DASHBOARD MODAL: PREMIUM ACCESS PASS / CERTIFICATE */}
       {selectedBooking && (
           <div className="modal-overlay">
               <div className="modal-content" style={{ maxWidth: showCertificate ? '750px' : '420px', background: 'transparent', border: 'none', boxShadow: 'none' }}>
-                
                 {showCertificate ? (
                     <div className="certificate-paper page-transition" id="certificate-content" style={{ background: 'white', color: '#1e293b', border: '15px solid #1e293b', padding: '3rem', position: 'relative' }}>
                         <div style={{ border: '2px solid #1e293b', padding: '3rem', textAlign: 'center' }}>
                             <div style={{ color: 'var(--primary)', fontWeight: '900', fontSize: '0.8rem', letterSpacing: '4px', marginBottom: '1rem' }}>TECHFEST OFFICIAL RECOGNITION</div>
                             <h1 style={{ fontSize: '3.5rem', color: '#0f172a', margin: '1rem 0' }}>CERTIFICATE</h1>
                             <p style={{ letterSpacing: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>OF EXCELLENCE & PARTICIPATION</p>
-                            
                             <div style={{ margin: '3rem 0' }}>
                                 <p style={{ fontStyle: 'italic', fontSize: '1.2rem' }}>This prestigious document is awarded to</p>
                                 <h2 style={{ fontSize: '2.5rem', color: 'var(--primary)', textTransform: 'uppercase', margin: '1.5rem 0' }}>{user.name}</h2>
                                 <p style={{ fontSize: '1.1rem' }}>for their exceptional participation and performance in the</p>
                                 <h3 style={{ color: '#1e293b', fontSize: '1.8rem' }}>{getEventName(selectedBooking.eventId).toUpperCase()}</h3>
                             </div>
-
                             <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Authenticated UID: TF-CERT-{selectedBooking.id}-{user.id}</p>
-                            
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4rem', padding: '0 2rem' }}>
                                 <div style={{ borderTop: '2px solid #0f172a', width: '180px', paddingTop: '0.8rem', fontWeight: 'bold' }}>Festival Registrar</div>
                                 <div style={{ borderTop: '2px solid #0f172a', width: '180px', paddingTop: '0.8rem', fontWeight: 'bold' }}>Technical Chair</div>
@@ -270,14 +309,8 @@ const UserDashboard = () => {
                         <div className="ticket-cut ticket-cut-right"></div>
                         <div className="ticket-details">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
-                                </div>
-                                <div>
-                                    <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{selectedBooking.ticketsBooked} Slot(s)</div>
-                                </div>
+                                <div><small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small><div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div></div>
+                                <div><small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small><div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{selectedBooking.ticketsBooked} Slot(s)</div></div>
                             </div>
                             <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>REGISTERED ATTENDEES</small>
                             <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
@@ -285,16 +318,10 @@ const UserDashboard = () => {
                             </div>
                         </div>
                         <div className="real-qr-container">
-                            <div className="qr-frame">
-                                <img className="qr-image" 
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VALID_TOKEN_TF_${selectedBooking.id}`} 
-                                    alt="QR Access" />
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: '0.8rem' }}>SCAN TO AUTHENTICATE</div>
+                            <div className="qr-frame"><img className="qr-image" src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VALID_TOKEN_TF_${selectedBooking.id}`} alt="QR Access" /></div>
                         </div>
                     </div>
                 )}
-
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                         <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync Calendar</button>

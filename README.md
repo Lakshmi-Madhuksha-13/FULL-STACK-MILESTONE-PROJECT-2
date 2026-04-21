@@ -1,47 +1,33 @@
-# Technical Fest Ticket Booking System (Microservices)
+# 🚀 Technical Fest: Global Microservices Ticket System 🎟️
 
-A professional, full-stack distributed system designed to manage collegiate technical festivals, track live ticket inventory, and handle multi-attendee registrations. Built with a modern Microservices architecture using Spring Boot and React.
+A world-class, "Gold Standard" technical fest booking ecosystem built with **Spring Boot Microservices** and **React**. This platform provides a seamless, high-fidelity experience for students to browse, book, and manage their festival journey.
 
-## 🏛️ System Architecture
+## 🍱 Ecosystem Architecture
+- **Eureka Server:** The central nervous system for service discovery.
+- **User Service (8081):** Manages elite memberships, security, and real-time notifications.
+- **Event Service (8082):** The global database for technical festivals and venue management.
+- **Booking Service (8083):** Handles secure transactions and ticket ledger management.
+- **Vite Frontend:** A premium, glassmorphic UI with dynamic dark/light modes.
 
-The project follows a decoupled Microservices pattern for high scalability and modularity:
+## ✨ Elite Features
+- **🌓 Adaptive Theme Engine:** Smooth transitions between Dark and Light modes.
+- **📊 Live Pulse Leaderboard:** Real-time department ranking based on fest registrations.
+- **🎟️ Digital Access Pass:** Premium tickets with scannable QR codes for authentication.
+- **⏱️ Event Chronometer:** Dynamic real-time countdown to your next booked festival.
+- **🎓 Certification Hub:** Automated generation of Digital Certificates with PDF export.
+- **📅 Cloud Calendar Sync:** One-click sync to Google/Outlook calendars (.ics).
+- **💳 Secure Checkout:** Integrated payment gateway simulation (UPI & Card).
 
-*   **Eureka Server (Port 8761):** Acts as the Service Registry, allowing all microservices to discover and communicate with each other dynamically.
-*   **User Service (Port 8081):** Manages user authentication, profile roles (USER/ADMIN), and hosts the **Notification Engine** for real-time user alerts.
-*   **Event Service (Port 8082):** Maintains the directory of technical fests and manages live ticket inventory across different colleges/locations.
-*   **Booking Service (Port 8083):** Processes transactions, handles multi-attendee data (serialized JSON), and communicates with the Event Service for inventory updates.
-*   **React Frontend (Port 5173):** A premium, glassmorphism-styled landing page and dashboard system with real-time notification polling.
-
-## 🚀 Key Features
-
-*   **Multi-Attendee Booking:** Allows users to book 1-10 tickets at once, capturing unique names, emails, and departments for every individual attendee.
-*   **Live Notification Engine:** Automatically alerts users on their dashboard when an Admin modifies event logistics (Venue/Time) or cancels a booking.
-*   **Dynamic Inventory:** Real-time tracking of `availableTickets`. Tickets are automatically restored to the pool if a booking is cancelled by an Admin.
-*   **Premium UI/UX:** Dark-mode aesthetic featuring hover-reactive event cards, success modals with digital tickets, and unified notification badges.
-*   **Admin Control Panel:** Dedicated dashboard for event CRUD operations, user management, and visibility into the global booking log.
-
-## 🛠️ Technology Stack
-
-*   **Backend:** Java 17+, Spring Boot 3.x, Spring Data JPA, Hibernate.
-*   **Inter-Service Communication:** Spring Cloud Netflix Eureka, RestTemplate (Load-Balanced).
-*   **Frontend:** React JS (Vite), Axios, React Router, Vanilla CSS (Glassmorphism).
-*   **Database:** MySQL 8.0.
-*   **Tools:** Maven, Git, Postman.
-
-## 🏃 Running the Project
-
-### Prerequisites:
-1.  **MySQL:** Running on `localhost:3306` with credentials `root/root`.
-2.  **Database:** Create a schema named `ticket_booking`.
-
-### Startup Order:
-1.  Start `eureka-server` (Wait for dashboard at [http://localhost:8761](http://localhost:8761))
-2.  Start `user-service`, `event-service`, and `booking-service` in any order.
-3.  Navigate to `frontend/` and run `npm install` followed by `npm run dev`.
+## 🚀 Deployment & Installation
+1. **Start MySQL:** Ensure your local database is active on port 3306.
+2. **Launch Cluster:** Start Eureka Server followed by the User, Event, and Booking services.
+3. **Frontend Boot:** 
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+4. **Cloud Ready:** The system is architected for instant deployment to Vercel and Render.
 
 ---
-
-## 📸 Presentation Content
-For your PPT/Presentation, focus on the **Cross-Service Notification** flow and the **Multi-Attendee State Management** in the React frontend as the primary technical highlights.
-
-Developed for the **Full Stack Milestone Project 2**.
+**Built with Precision. Engineered for Excellence.** 🏆

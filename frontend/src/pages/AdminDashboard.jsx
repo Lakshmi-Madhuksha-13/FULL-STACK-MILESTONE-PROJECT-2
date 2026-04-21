@@ -6,38 +6,69 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [supportChats, setSupportChats] = useState([]);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [selectedUserChat, setSelectedUserChat] = useState(null);
+  
   const [newEvent, setNewEvent] = useState({ eventName: '', department: '', dateTime: '', venue: '', price: 0, totalTickets: 0, availableTickets: 0 });
   const [editingEvent, setEditingEvent] = useState(null);
   const [status, setStatus] = useState({ events: 'loading', users: 'loading', bookings: 'loading' });
 
-  // Pre-fetch all data on mount to ensure all tabs have content immediately
+  // Custom Modal States
+  const [customModal, setCustomModal] = useState({ show: false, title: '', message: '', onConfirm: null });
+
   useEffect(() => {
     fetchAllData();
-    const interval = setInterval(fetchAllData, 30000); // Sync every 30s
+    const interval = setInterval(() => {
+        fetchAllData();
+        if (activeTab === 'support') fetchSupport();
+    }, 10000); 
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   const fetchAllData = async () => {
-    // 1. Events
     try {
         const res = await api.event.get('');
         setEvents(res.data);
         setStatus(prev => ({...prev, events: 'online'}));
     } catch (e) { setStatus(prev => ({...prev, events: 'offline'})); }
 
-    // 2. Users
     try {
         const res = await api.user.get('');
         setUsers(res.data);
         setStatus(prev => ({...prev, users: 'online'}));
     } catch (e) { setStatus(prev => ({...prev, users: 'offline'})); }
 
-    // 3. Bookings
     try {
         const res = await api.booking.get('');
         setBookings(res.data);
         setStatus(prev => ({...prev, bookings: 'online'}));
     } catch (e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
+  };
+
+  const fetchSupport = async () => {
+    try {
+        const res = await api.support.get('/all');
+        // Group messages by userId for the chat list
+        const grouped = res.data.reduce((acc, msg) => {
+            if (!acc[msg.userId]) acc[msg.userId] = [];
+            acc[msg.userId].push(msg);
+            return acc;
+        }, {});
+        setSupportChats(grouped);
+    } catch (e) {}
+  };
+
+  const openDecision = (title, message, callback) => {
+    setCustomModal({ show: true, title, message, onConfirm: callback });
+  };
+
+  const handleSendReply = async (uId) => {
+    if (!replyMessage.trim()) return;
+    const msg = { userId: uId, senderName: 'Admin Support', message: replyMessage, type: 'ADMIN' };
+    await api.support.post('/send', msg);
+    setReplyMessage('');
+    fetchSupport();
   };
 
   const getEventName = (id) => {
@@ -57,27 +88,6 @@ const AdminDashboard = () => {
     await api.event.put(`/${editingEvent.id}`, editingEvent);
     setEditingEvent(null);
     fetchAllData();
-  };
-
-  const handleDeleteEvent = async (id) => {
-    if(window.confirm("CRITICAL: This will PERMANENTLY delete the event. Proceed?")) {
-      await api.event.delete(`/${id}`);
-      fetchAllData();
-    }
-  };
-
-  const handleDeleteUser = async (id) => {
-    if(window.confirm("Are you sure you want to delete this user?")) {
-      await api.user.delete(`/${id}`);
-      fetchAllData();
-    }
-  };
-
-  const handleCancelBooking = async (id) => {
-    if(window.confirm("ADMIN ACTION: Cancel this booking?")) {
-        await api.booking.delete(`/${id}`);
-        fetchAllData();
-    }
   };
 
   const [currentUser] = useState(() => {
@@ -114,13 +124,16 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
         <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'events' ? 1 : 0.6 }} onClick={() => setActiveTab('events')}>System Events</button>
         <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'users' ? 1 : 0.6 }} onClick={() => setActiveTab('users')}>User Registry</button>
         <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>Booking Log</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'support' ? 1 : 0.6, background: 'var(--vivid-pink)' }} onClick={() => setActiveTab('support')}>
+            Help Desk {Object.keys(supportChats).length > 0 && <span style={{ background: 'white', color: 'black', borderRadius: '50%', padding: '0 0.4rem', marginLeft: '0.5rem', fontSize: '0.7rem' }}>{Object.keys(supportChats).length}</span>}
+        </button>
       </div>
 
-      <div className="glass-panel" style={{ minHeight: '400px', padding: '2rem' }}>
+      <div className="glass-panel" style={{ minHeight: '450px', padding: '2rem' }}>
         {activeTab === 'events' && (
           <div>
             {editingEvent ? (
@@ -159,7 +172,10 @@ const AdminDashboard = () => {
                   </div>
                   <div style={{ display: 'flex', gap: '0.8rem' }}>
                     <button onClick={() => setEditingEvent(ev)} className="btn-elite" style={{ padding: '0.4rem 1rem' }}>Edit</button>
-                    <button onClick={() => handleDeleteEvent(ev.id)} className="btn-elite" style={{ padding: '0.4rem 1rem', background: 'var(--accent)' }}>Delete</button>
+                    <button onClick={() => openDecision("Confirm Deletion", `Are you sure you want to permanently delete the event "${ev.eventName}"?`, async () => {
+                        await api.event.delete(`/${ev.id}`);
+                        fetchAllData();
+                    })} className="btn-elite" style={{ padding: '0.4rem 1rem', background: 'var(--accent)' }}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -191,7 +207,10 @@ const AdminDashboard = () => {
                         <span className="innovative-badge" style={{ background: u.role === 'ADMIN' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', fontSize: '0.6rem' }}>{u.role}</span>
                     </td>
                     <td style={{ padding: '1rem' }}>
-                        {u.role !== 'ADMIN' && <button onClick={() => handleDeleteUser(u.id)} className="btn-elite" style={{ background: 'var(--accent)', fontSize: '0.7rem', padding: '0.3rem 0.8rem' }}>Purge</button>}
+                        {u.role !== 'ADMIN' && <button onClick={() => openDecision("Confirm Purge", `Are you sure you want to delete user ${u.name}?`, async () => {
+                            await api.user.delete(`/${u.id}`);
+                            fetchAllData();
+                        })} className="btn-elite" style={{ background: 'var(--accent)', fontSize: '0.7rem', padding: '0.3rem 0.8rem' }}>Purge</button>}
                     </td>
                   </tr>
                 ))}
@@ -223,7 +242,10 @@ const AdminDashboard = () => {
                           <td style={{ padding: '1rem' }}>{b.ticketsBooked}</td>
                           <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount.toLocaleString()}</td>
                           <td style={{ padding: '1rem' }}>
-                              <button onClick={() => handleCancelBooking(b.id)} className="btn-elite" style={{ background: 'var(--accent)', padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>Revoke</button>
+                              <button onClick={() => openDecision("Revoke Booking", "Are you sure you want to cancel this entry pass and notify the user?", async () => {
+                                  await api.booking.delete(`/${b.id}`);
+                                  fetchAllData();
+                              })} className="btn-elite" style={{ background: 'var(--accent)', padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>Revoke</button>
                           </td>
                         </tr>
                       ))}
@@ -231,7 +253,64 @@ const AdminDashboard = () => {
             </table>
           </div>
         )}
+
+        {activeTab === 'support' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
+                <div style={{ borderRight: '1px solid var(--glass-border)', paddingRight: '1.5rem' }}>
+                    <h4 style={{ marginBottom: '1.5rem', opacity: 0.8 }}>Active Enquiries</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                        {Object.keys(supportChats).map(uId => {
+                            const msgs = supportChats[uId];
+                            const last = msgs[msgs.length - 1];
+                            return (
+                                <div key={uId} onClick={() => setSelectedUserChat(uId)} style={{ padding: '1rem', background: selectedUserChat === uId ? 'var(--primary)' : 'var(--glass-bg)', borderRadius: '0.8rem', cursor: 'pointer', transition: '0.3s' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>MEMBER ID: {uId}</div>
+                                    <div style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: '0.3rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{last.message}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div>
+                    {selectedUserChat ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {supportChats[selectedUserChat].map((m, i) => (
+                                    <div key={i} style={{ alignSelf: m.type === 'ADMIN' ? 'flex-end' : 'flex-start', background: m.type === 'ADMIN' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.8rem 1.2rem', borderRadius: '1rem', maxWidth: '70%' }}>
+                                        <div style={{ fontSize: '0.8rem' }}>{m.message}</div>
+                                        <div style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '0.3rem', textAlign: 'right' }}>{new Date(m.timestamp).toLocaleTimeString()}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <input type="text" className="form-control" placeholder="Type your response..." value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendReply(selectedUserChat)}/>
+                                <button className="btn-primary" style={{ width: '100px' }} onClick={() => handleSendReply(selectedUserChat)}>Send</button>
+                            </div>
+                        </div>
+                    ) : <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>Select a chat to view history</div>}
+                </div>
+            </div>
+        )}
       </div>
+
+      {/* CUSTOM INTERACTIVE DECISION MODAL */}
+      {customModal.show && (
+          <div className="modal-overlay" style={{ perspective: '1000px' }}>
+              <div className="modal-content page-transition" style={{ maxWidth: '400px', transform: 'rotateX(-5deg)', border: '1px solid var(--accent)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+                        <h3 className="gradient-text" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{customModal.title}</h3>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '2rem' }}>{customModal.message}</p>
+                        
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn-primary" style={{ background: 'var(--accent)' }} onClick={() => { customModal.onConfirm(); setCustomModal({...customModal, show: false}); }}>Yes, Execute</button>
+                            <button className="btn-elite" style={{ background: 'transparent' }} onClick={() => setCustomModal({...customModal, show: false})}>Cancel</button>
+                        </div>
+                    </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

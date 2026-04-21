@@ -19,7 +19,8 @@ const BASE_URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;
 const api = {
     user: axios.create({ baseURL: BASE_URLS.USER_SERVICE }),
     event: axios.create({ baseURL: BASE_URLS.EVENT_SERVICE }),
-    booking: axios.create({ baseURL: BASE_URLS.BOOKING_SERVICE })
+    booking: axios.create({ baseURL: BASE_URLS.BOOKING_SERVICE }),
+    support: axios.create({ baseURL: `${LOCAL_URLS.USER_SERVICE.replace('/users', '/support')}` })
 };
 
 // Add interceptors for debugging
