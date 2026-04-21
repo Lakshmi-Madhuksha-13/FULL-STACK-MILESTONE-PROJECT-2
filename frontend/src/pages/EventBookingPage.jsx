@@ -52,8 +52,8 @@ const EventBookingPage = () => {
     await new Promise(r => setTimeout(r, 2500));
     
     try {
-        // Hits /api/bookings/
-        const response = await api.booking.post('/', pendingBookingData);
+        // Hits the base URL exactly
+        const response = await api.booking.post('', pendingBookingData);
         setTicketSummary({
             ...response.data,
             eventName: event.eventName,

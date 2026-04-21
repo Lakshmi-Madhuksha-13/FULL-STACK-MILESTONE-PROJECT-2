@@ -10,36 +10,34 @@ const AdminDashboard = () => {
   const [editingEvent, setEditingEvent] = useState(null);
   const [status, setStatus] = useState({ events: 'loading', users: 'loading', bookings: 'loading' });
 
+  // Pre-fetch all data on mount to ensure all tabs have content immediately
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 30000); // Sync every 30s
+    return () => clearInterval(interval);
+  }, []);
 
-  const fetchData = async () => {
+  const fetchAllData = async () => {
+    // 1. Events
     try {
-      if (activeTab === 'events') {
         const res = await api.event.get('');
         setEvents(res.data);
         setStatus(prev => ({...prev, events: 'online'}));
-      } else if (activeTab === 'users') {
+    } catch (e) { setStatus(prev => ({...prev, events: 'offline'})); }
+
+    // 2. Users
+    try {
         const res = await api.user.get('');
         setUsers(res.data);
         setStatus(prev => ({...prev, users: 'online'}));
-      } else if (activeTab === 'bookings') {
-        try {
-            const bRes = await api.booking.get('');
-            setBookings(bRes.data);
-            setStatus(prev => ({...prev, bookings: 'online'}));
-        } catch(e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
-        
-        try {
-            const eRes = await api.event.get('');
-            setEvents(eRes.data);
-            setStatus(prev => ({...prev, events: 'online'}));
-        } catch(e) { setStatus(prev => ({...prev, events: 'offline'})); }
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (e) { setStatus(prev => ({...prev, users: 'offline'})); }
+
+    // 3. Bookings
+    try {
+        const res = await api.booking.get('');
+        setBookings(res.data);
+        setStatus(prev => ({...prev, bookings: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
   };
 
   const getEventName = (id) => {
@@ -49,36 +47,36 @@ const AdminDashboard = () => {
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
-    await api.event.post('/', newEvent);
+    await api.event.post('', newEvent);
     setNewEvent({ eventName: '', department: '', dateTime: '', venue: '', price: 0, totalTickets: 0, availableTickets: 0 });
-    fetchData();
+    fetchAllData();
   };
 
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
     await api.event.put(`/${editingEvent.id}`, editingEvent);
     setEditingEvent(null);
-    fetchData();
+    fetchAllData();
   };
 
   const handleDeleteEvent = async (id) => {
     if(window.confirm("CRITICAL: This will PERMANENTLY delete the event. Proceed?")) {
       await api.event.delete(`/${id}`);
-      fetchData();
+      fetchAllData();
     }
   };
 
   const handleDeleteUser = async (id) => {
     if(window.confirm("Are you sure you want to delete this user?")) {
       await api.user.delete(`/${id}`);
-      fetchData();
+      fetchAllData();
     }
   };
 
   const handleCancelBooking = async (id) => {
     if(window.confirm("ADMIN ACTION: Cancel this booking?")) {
         await api.booking.delete(`/${id}`);
-        fetchData();
+        fetchAllData();
     }
   };
 
