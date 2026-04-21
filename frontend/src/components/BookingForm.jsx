@@ -78,14 +78,12 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
         attendeeDetails: JSON.stringify(attendees) // Pass as JSON string to backend
       };
 
-      await axios.post('http://localhost:8083/api/bookings', bookingData);
+      const response = await axios.post('http://localhost:8083/api/bookings', bookingData);
       
       onBookingSuccess({
-        userName: attendees[0].name, // Main attendee
+        ...response.data,
         eventName: event.eventName,
-        ticketsBooked: ticketCount,
-        totalAmount: bookingData.totalAmount,
-        attendees: attendees // Pass array for the success modal to show all names
+        attendees: attendees // Keep original array for easier mapping in UI
       });
       handleReset();
     } catch (err) {

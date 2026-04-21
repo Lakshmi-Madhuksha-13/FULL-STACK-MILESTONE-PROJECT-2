@@ -89,7 +89,7 @@ const EventBookingPage = () => {
                 <div className="ticket-top">OFFICIAL ENTRY PASS</div>
                 <div className="ticket-body" style={{ textAlign: 'left', color: '#0f172a' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{ticketSummary.eventName}</h4>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>ID: #TKT-{ticketSummary.id || 'TEMP'}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>TICKET ID: #TF-{ticketSummary.id}</div>
                   
                   <div style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
                     <strong>Attendees:</strong>
