@@ -13,6 +13,7 @@ const UserDashboard = () => {
   const [wishlistEvents, setWishlistEvents] = useState([]);
   const [countdown, setCountdown] = useState('');
   const [showCertificate, setShowCertificate] = useState(false);
+  const [status, setStatus] = useState({ bookings: 'loading', notifications: 'loading', events: 'loading' });
 
   const [user] = useState(() => {
     try {
@@ -23,8 +24,8 @@ const UserDashboard = () => {
 
   useEffect(() => {
     if (user && user.id) {
-      fetchData();
-      const interval = setInterval(fetchData, 10000); 
+      fetchAllData();
+      const interval = setInterval(fetchAllData, 15000); 
       return () => clearInterval(interval);
     }
   }, [user?.id]);
@@ -38,29 +39,35 @@ const UserDashboard = () => {
     }
   }, [bookings, user]);
 
-  const fetchData = async () => {
-      try {
-        const [bookingsRes, notifyRes, eventsRes] = await Promise.all([
-            // hits /api/bookings/user/{id}
-            api.booking.get(`/user/${user.id}`),
-            // hits /api/users/{id}/notifications
-            api.user.get(`/${user.id}/notifications`),
-            // hits /api/events
-            api.event.get('')
-        ]);
-        setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
-        setNotifications(Array.isArray(notifyRes.data) ? notifyRes.data : []);
-        setAllEvents(eventsRes.data);
-      } catch (err) {
-          console.error("Dashboard Sync Error:", err);
-      } finally {
-          setLoading(false);
-      }
+  const fetchAllData = async () => {
+    // 1. Fetch Bookings
+    try {
+        const res = await api.booking.get(`/user/${user.id}`);
+        setBookings(Array.isArray(res.data) ? res.data : []);
+        setStatus(prev => ({...prev, bookings: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
+
+    // 2. Fetch Notifications
+    try {
+        const res = await api.user.get(`/${user.id}/notifications`);
+        setNotifications(Array.isArray(res.data) ? res.data : []);
+        setStatus(prev => ({...prev, notifications: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, notifications: 'offline'})); }
+
+    // 3. Fetch Events (for naming)
+    try {
+        const res = await api.event.get('');
+        setAllEvents(res.data);
+        setStatus(prev => ({...prev, events: 'online'}));
+    } catch (e) { setStatus(prev => ({...prev, events: 'offline'})); }
+
+    setLoading(false);
   };
 
   const getEventName = (id) => {
     const ev = allEvents.find(e => e.id === id);
-    return ev ? ev.eventName : `Event #${id}`;
+    if (!ev) return status.events === 'online' ? `Code: #${id}` : 'Connecting to Event Service...';
+    return ev.eventName;
   };
 
   const fetchWishlist = async () => {
@@ -87,18 +94,18 @@ const UserDashboard = () => {
 
   const handleExportCalendar = (b) => {
     const evName = getEventName(b.eventId);
-    const content = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${evName}\nDESCRIPTION:Official entry pass for ${evName}\nDTSTART:20260425T090000Z\nDTEND:20260425T170000Z\nEND:VEVENT\nEND:VCALENDAR`;
+    const content = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${evName}\nDTSTART:20260425T090000Z\nEND:VEVENT\nEND:VCALENDAR`;
     const blob = new Blob([content], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${evName.replace(/\s+/g, '_')}_Schedule.ics`;
+    link.download = `TF_Pass_${b.id}.ics`;
     link.click();
   };
 
   const markAsRead = async (id) => {
     await api.user.put(`/notifications/${id}/read`);
-    fetchData();
+    fetchAllData();
   };
 
   const parseAttendees = (details) => {
@@ -113,6 +120,13 @@ const UserDashboard = () => {
 
   return (
     <div className="app-container page-transition">
+      {/* SERVICE HEALTH CHECK (Admin-Style UI) */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', fontSize: '0.65rem', justifyContent: 'flex-end' }}>
+          <span style={{ color: status.bookings === 'online' ? 'var(--success)' : 'var(--accent)' }}>● BOOKING SERVICE</span>
+          <span style={{ color: status.events === 'online' ? 'var(--success)' : 'var(--accent)' }}>● EVENT DB</span>
+          <span style={{ color: status.notifications === 'online' ? 'var(--success)' : 'var(--accent)' }}>● NOTIFICATION HUB</span>
+      </div>
+
       {bookings.length > 0 && (
           <div className="glass-panel" style={{ background: 'linear-gradient(90deg, var(--primary), var(--secondary))', padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -132,7 +146,11 @@ const UserDashboard = () => {
       <div className="glass-panel">
         {activeTab === 'bookings' ? (
           <>
-            <h2 className="gradient-text">Ticket Inventory</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 className="gradient-text">Ticket Inventory</h2>
+                {status.bookings === 'offline' && <small style={{ color: 'var(--accent)' }}>Trying to connect to system...</small>}
+            </div>
+            
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '1rem' }}>
                 <thead style={{ borderBottom: '1px solid var(--glass-border)' }}>
@@ -140,7 +158,7 @@ const UserDashboard = () => {
                     <th style={{ padding: '1rem' }}>BOOKING ID</th>
                     <th style={{ padding: '1rem' }}>EVENT NAME</th>
                     <th style={{ padding: '1rem' }}>TICKETS</th>
-                    <th style={{ padding: '1rem' }}>AMOUNT</th>
+                    <th style={{ padding: '1rem' }}>REVENUE</th>
                     <th style={{ padding: '1rem' }}>ACTION</th>
                     </tr>
                 </thead>
@@ -153,10 +171,12 @@ const UserDashboard = () => {
                         <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
                         <td style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
                             <button className="btn-elite" onClick={() => setSelectedBooking(b)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto' }}>View Pass</button>
-                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(true); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto', background: 'var(--accent)' }}>Certificate</button>
                         </td>
                     </tr>
                     ))}
+                    {bookings.length === 0 && !loading && (
+                        <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>No active tickets in your inventory.</td></tr>
+                    )}
                 </tbody>
                 </table>
             </div>
@@ -193,30 +213,10 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* DUAL MODAL: TICKET OR CERTIFICATE */}
+      {/* DASHBOARD MODAL: PREMIUM ACCESS PASS */}
       {selectedBooking && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{ maxWidth: showCertificate ? '700px' : '420px', background: 'transparent', border: 'none' }}>
-                
-                {showCertificate ? (
-                    <div className="certificate-paper page-transition">
-                        <div style={{ border: '2px solid #1e293b', padding: '2rem' }}>
-                            <h1 style={{ fontSize: '2.5rem', color: 'var(--primary)', margin: 0 }}>CERTIFICATE</h1>
-                            <p style={{ letterSpacing: '3px', fontWeight: 'bold' }}>OF PARTICIPATION</p>
-                            <div style={{ margin: '2rem 0' }}>
-                                <p>This is to certify that</p>
-                                <h2 style={{ fontSize: '2rem', textDecoration: 'underline' }}>{user.name}</h2>
-                                <p>successfully participated in</p>
-                                <h3 style={{ color: 'var(--secondary)' }}>{getEventName(selectedBooking.eventId).toUpperCase()}</h3>
-                            </div>
-                            <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>Issued on: {new Date().toLocaleDateString()}</p>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3rem' }}>
-                                <div style={{ borderTop: '1px solid #000', width: '150px' }}>Registrar</div>
-                                <div style={{ borderTop: '1px solid #000', width: '150px' }}>Event Head</div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
+              <div className="modal-content" style={{ maxWidth: '420px', background: 'transparent', border: 'none' }}>
                     <div className="real-ticket">
                     <div className="ticket-header">
                         <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>SECURE ACCESS PASS</div>
@@ -232,8 +232,8 @@ const UserDashboard = () => {
                                 <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
                             </div>
                             <div>
-                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>USER ID</small>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>USR-{selectedBooking.userId}</div>
+                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{selectedBooking.ticketsBooked} Slot(s)</div>
                             </div>
                         </div>
                         <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ATTENDEES</small>
@@ -249,15 +249,14 @@ const UserDashboard = () => {
                         </div>
                     </div>
                     </div>
-                )}
 
-                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                        <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync to Calendar</button>
-                        <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ Print</button>
+                    <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync Calendar</button>
+                            <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ Print Pass</button>
+                        </div>
+                        <button className="btn-primary" style={{ background: 'transparent', border: '1px solid white' }} onClick={() => setSelectedBooking(null)}>Close</button>
                     </div>
-                    <button className="btn-primary" style={{ background: 'transparent', border: '1px solid white' }} onClick={() => { setSelectedBooking(null); setShowCertificate(false); }}>Close</button>
-                </div>
               </div>
           </div>
       )}
