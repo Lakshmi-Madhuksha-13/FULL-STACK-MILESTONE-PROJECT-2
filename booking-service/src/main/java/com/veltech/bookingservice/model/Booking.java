@@ -15,7 +15,10 @@ public class Booking {
     private Integer ticketsBooked;
     private Double totalAmount;
     @Column(length = 2000)
-    private String attendeeDetails; // Stores JSON or string representation of attendees
+    private String attendeeDetails; 
+    
+    // 🏦 FINANCIAL STATUS FIELD
+    private String status = "CONFIRMED"; // CONFIRMED, CANCELLED, REFUNDED
 
     public Booking() {
     }
@@ -45,4 +48,7 @@ public class Booking {
 
     public String getAttendeeDetails() { return attendeeDetails; }
     public void setAttendeeDetails(String attendeeDetails) { this.attendeeDetails = attendeeDetails; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

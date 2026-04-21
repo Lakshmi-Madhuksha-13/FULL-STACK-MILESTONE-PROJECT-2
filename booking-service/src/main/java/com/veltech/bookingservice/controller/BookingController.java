@@ -5,13 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import com.veltech.bookingservice.model.Booking;
@@ -30,26 +24,18 @@ public class BookingController {
 
     @PostMapping
     public ResponseEntity<?> bookTicket(@RequestBody Booking booking) {
-        // Assume price calculation logic happens here or at frontend, we will trust frontend amount for now
-        // But we must update tickets in Event service
         String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + booking.getTicketsBooked();
-        
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    eventServiceUrl, 
-                    org.springframework.http.HttpMethod.PUT, 
-                    null, 
-                    String.class
-            );
-
+            ResponseEntity<String> response = restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
             if (response.getStatusCode() == HttpStatus.OK) {
+                booking.setStatus("CONFIRMED");
                 Booking savedBooking = bookingRepository.save(booking);
                 return ResponseEntity.ok(savedBooking);
             } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to book tickets. Not enough availability.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not enough availability.");
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error communicating with Event Service: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Service communication error.");
         }
     }
 
@@ -57,48 +43,41 @@ public class BookingController {
     public ResponseEntity<List<Booking>> getBookingHistory(@PathVariable Long userId) {
         return ResponseEntity.ok(bookingRepository.findByUserId(userId));
     }
+
     @GetMapping
     public ResponseEntity<List<Booking>> getAllBookings() {
         return ResponseEntity.ok(bookingRepository.findAll());
     }
-    @GetMapping("/{id}")
-    public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
-        return bookingRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-    }
 
-    @GetMapping("/event/{eventId}")
-    public ResponseEntity<List<Booking>> getBookingsByEvent(@PathVariable Long eventId) {
-        return ResponseEntity.ok(bookingRepository.findByEventId(eventId));
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> request) {
+        String newStatus = request.get("status");
+        return bookingRepository.findById(id).map(booking -> {
+            booking.setStatus(newStatus);
+            return ResponseEntity.ok(bookingRepository.save(booking));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @jakarta.transaction.Transactional
-    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
         return bookingRepository.findById(id).map(booking -> {
-            // Restore tickets in Event service
+            // Restore tickets
             String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + (-booking.getTicketsBooked());
-            restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
+            try { restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class); } catch(Exception e) {}
             
-            // Notify User with a Rich Snapshot
+            // ARCHIVE AS CANCELLED INSTEAD OF DELETE
+            booking.setStatus("CANCELLED");
+            bookingRepository.save(booking);
+            
+            // Notify User
             String userServiceUrl = "http://user-service/api/users/notifications";
             java.util.Map<String, Object> notification = new java.util.HashMap<>();
             notification.put("userId", booking.getUserId());
-            
-            // Build Snapshot Message
-            String snapshot = String.format(
-                "BOOKING_SNAPSHOT|ID: #TF-%d | Event: %s | Cost: ₹%.2f | Slots: %d | Attendees: %s",
-                id, 
-                "Event #" + booking.getEventId(), // Controller doesn't have name, frontend will resolve or we can hardcode
-                booking.getTotalAmount(),
-                booking.getTicketsBooked(),
-                booking.getAttendeeDetails() // This contains JSON string of names
-            );
-            
-            notification.put("message", snapshot);
+            notification.put("message", "BOOKING_CANCELLED: Your entry pass for Event #" + booking.getEventId() + " has been liquidated. Refund is now processing.");
             try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
 
-            bookingRepository.delete(booking);
-            return ResponseEntity.ok("Booking Snapshot Archived and Cancelled");
+            return ResponseEntity.ok("State Transitioned to CANCELLED");
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
     }
 }
