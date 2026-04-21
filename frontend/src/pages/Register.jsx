@@ -39,16 +39,19 @@ const Register = () => {
             <label>Full Name</label>
             <input type="text" required className="form-control" onChange={(e) => setFormData({...formData, name: e.target.value})} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Department</label>
-                <input type="text" placeholder="e.g. CSE" className="form-control" onChange={(e) => setFormData({...formData, department: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label>College Name</label>
-                <input type="text" placeholder="e.g. Vel Tech" className="form-control" onChange={(e) => setFormData({...formData, college: e.target.value})} />
-              </div>
-          </div>
+
+          {formData.role === 'USER' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Department</label>
+                  <input type="text" placeholder="e.g. CSE" className="form-control" onChange={(e) => setFormData({...formData, department: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>College Name</label>
+                  <input type="text" placeholder="e.g. Vel Tech" className="form-control" onChange={(e) => setFormData({...formData, college: e.target.value})} />
+                </div>
+            </div>
+          )}
           <div className="form-group">
             <label>Email</label>
             <input type="email" required className="form-control" onChange={(e) => setFormData({...formData, email: e.target.value})} />
