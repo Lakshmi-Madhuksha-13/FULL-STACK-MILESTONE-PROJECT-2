@@ -1,188 +1,150 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import EventDetails from '../components/EventDetails';
-import BookingForm from '../components/BookingForm';
 
 const EventBookingPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [event, setEvent] = useState(null);
-  const [ticketSummary, setTicketSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pendingBookingData, setPendingBookingData] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : null;
-    } catch (e) { return null; }
-  });
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [event, setEvent] = useState(null);
+    const [attendees, setAttendees] = useState(['']);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
 
-  const fetchEvent = async (isSilent = false) => {
-    try {
-      if (!isSilent) setLoading(true);
-      // Corrected: hits /api/events/{id}
-      const response = await api.event.get(`/${id}`);
-      setEvent(response.data);
-      setError('');
-    } catch (err) {
-      if (!isSilent) setError('Failed to fetch event details.');
-    } finally {
-      if (!isSilent) setLoading(false);
-    }
-  };
+    const user = JSON.parse(localStorage.getItem('currentUser'));
 
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
+    useEffect(() => {
+        if (!user) navigate('/login');
+        fetchEventDetails();
+    }, [id]);
 
-  const handleBookingStart = (data) => {
-    setPendingBookingData(data);
-    setShowPaymentModal(true);
-  };
+    const fetchEventDetails = async () => {
+        try {
+            const res = await api.event.get(`/${id}`);
+            setEvent(res.data);
+        } catch (e) { setError('Connection standby: Target event asset unreachable.'); }
+    };
 
-  const handleConfirmPayment = async () => {
-    setIsProcessing(true);
-    await new Promise(r => setTimeout(r, 2500));
-    
-    try {
-        // Hits the base URL exactly
-        const response = await api.booking.post('', pendingBookingData);
-        setTicketSummary({
-            ...response.data,
-            eventName: event.eventName,
-            attendees: JSON.parse(pendingBookingData.attendeeDetails)
-        });
-        setShowPaymentModal(false);
-        setShowSuccessModal(true);
-        fetchEvent(true);
-    } catch (e) {
-        alert("Payment Gateaway Error: Communication Failed.");
-    } finally {
-        setIsProcessing(false);
-    }
-  };
+    const handleAddAttendee = () => {
+        if (attendees.length < (event?.availableTickets || 0)) {
+            setAttendees([...attendees, '']);
+        }
+    };
 
-  if (loading && !event) return <div className="app-container" style={{textAlign: 'center', padding: '3rem'}}>Initializing Secure Checkout...</div>;
-  if (error) return <div className="app-container" style={{textAlign: 'center', color: 'var(--accent)', padding: '3rem'}}>{error}</div>;
+    const handleRemoveAttendee = (index) => {
+        if (attendees.length > 1) {
+            setAttendees(attendees.filter((_, i) => i !== index));
+        }
+    };
+
+    const updateAttendeeName = (index, name) => {
+        const newAttendees = [...attendees];
+        newAttendees[index] = name;
+        setAttendees(newAttendees);
+    };
+
+    const handleBooking = async () => {
+        if (attendees.some(name => !name.trim())) {
+            setError('Incomplete Data: Please provide names for all authenticated attendees.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const booking = {
+                userId: user.id,
+                eventId: event.id,
+                ticketsBooked: attendees.length,
+                totalAmount: event.price * attendees.length,
+                attendeeDetails: JSON.stringify(attendees)
+            };
+
+            await api.booking.post('', booking);
+            setSuccess(true);
+            
+            // Automated Redirection to Vault
+            setTimeout(() => navigate('/dashboard'), 3000);
+        } catch (err) {
+            setError('Transaction Voided: Insufficient slots or microservice connection timeout.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (success) return (
+        <div className="app-container page-transition" style={{ textAlign: 'center', paddingTop: '10rem' }}>
+            <div style={{ fontSize: '5rem', marginBottom: '2rem' }}>✅</div>
+            <h1 className="gradient-text" style={{ fontSize: '3rem' }}>Mission Success!</h1>
+            <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem' }}>Credentials authorized. Sweeping you to the Vault...</p>
+        </div>
+    );
+
+    if (!event) return <div className="app-container" style={{ textAlign: 'center', padding: '10rem' }}><p>Synchronizing with Cloud Edge...</p></div>;
 
   return (
     <div className="app-container page-transition">
-      <Link to="/events" className="btn-elite" style={{ background: 'transparent', border: '1px solid var(--glass-border)', display: 'inline-flex', marginBottom: '2rem', width: 'auto' }}>
-        &larr; Browse More Festivals
-      </Link>
-
-      <div className="glass-panel" style={{ padding: '2rem', marginBottom: '4rem' }}>
-        <h2 className="gradient-text" style={{ textAlign: 'center', marginBottom: '2rem' }}>Event Registration</h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem' }}>
-          <EventDetails event={event} />
-          <div>
-            {user ? (
-               <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <BookingForm event={event} onBookingSuccess={handleBookingStart} user={user} />
-               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <h3 style={{ color: 'var(--text-dim)' }}>Session Required</h3>
-                <button className="btn-primary" onClick={() => navigate('/login')}>Login to Register</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* SECURE PAYMENT MODAL */}
-      {showPaymentModal && (
-        <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '450px' }}>
-                <h2 className="gradient-text">Secure Checkout</h2>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <button className={`btn-primary ${paymentMethod === 'card' ? '' : 'btn-dim'}`} style={{ flex: 1, opacity: paymentMethod === 'card' ? 1 : 0.4 }} onClick={() => setPaymentMethod('card')}>💳 Card</button>
-                    <button className={`btn-primary ${paymentMethod === 'upi' ? '' : 'btn-dim'}`} style={{ flex: 1, opacity: paymentMethod === 'upi' ? 1 : 0.4 }} onClick={() => setPaymentMethod('upi')}>📱 UPI</button>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '3rem' }}>
+            {/* 🛡️ EVENT RECAP */}
+            <div className="glass-panel" style={{ padding: '3rem' }}>
+                <span className="innovative-badge" style={{ background: 'var(--primary)', marginBottom: '1.5rem' }}>OFFICIAL ENTRY</span>
+                <h1 className="gradient-text" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{event.eventName}</h1>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1rem', color: 'var(--text-dim)', marginBottom: '2.5rem' }}>
+                    <span>📍</span> <span>{event.venue}</span>
+                    <span>🕒</span> <span>{event.dateTime}</span>
+                    <span>💎</span> <span>₹{event.price} / Ticket</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.05)' }}>
-                    <p style={{ color: 'var(--text-dim)', marginBottom: '1rem' }}>Total Amount: <strong style={{ color: 'white' }}>₹{pendingBookingData?.totalAmount}</strong></p>
-                    {paymentMethod === 'card' ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input type="text" className="form-control" placeholder="Card Number" disabled={isProcessing}/>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <input type="text" className="form-control" placeholder="MM/YY" disabled={isProcessing}/>
-                                <input type="password" className="form-control" placeholder="CVV" disabled={isProcessing}/>
-                            </div>
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '2.5rem' }}>
+                    <h3 style={{ marginBottom: '1.5rem' }}>Authenticated Attendees</h3>
+                    {attendees.map((name, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <input 
+                                type="text" placeholder={`Attendee #${i+1} Name`} 
+                                className="form-control" value={name} 
+                                onChange={(e) => updateAttendeeName(i, e.target.value)} 
+                            />
+                            {attendees.length > 1 && (
+                                <button onClick={() => handleRemoveAttendee(i)} style={{ background: 'transparent', border: 'none', color: 'var(--vivid-pink)', fontWeight: 'bold', cursor: 'pointer' }}>REMOVE</button>
+                            )}
                         </div>
-                    ) : (
-                        <div style={{ textAlign: 'center' }}>
-                            <div className="qr-frame" style={{ marginBottom: '1rem' }}>
-                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=fest@gateway&pn=TechnicalFest&am=${pendingBookingData?.totalAmount}`} alt="UPI QR" style={{ width: '150px' }} />
-                            </div>
-                            <input type="text" className="form-control" style={{ textAlign: 'center' }} placeholder="yourname@okaxis" disabled={isProcessing}/>
-                        </div>
-                    )}
+                    ))}
+                    <button className="btn-elite" onClick={handleAddAttendee} disabled={attendees.length >= event.availableTickets} style={{ width: 'auto', background: 'rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>+ ADD ANOTHER SLOT</button>
                 </div>
+            </div>
 
-                <button className="btn-primary" onClick={handleConfirmPayment} disabled={isProcessing}>
-                    {isProcessing ? 'Verifying Transaction...' : 'Pay & Confirm Booking'}
-                </button>
-                {!isProcessing && <button style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', width: '100%', marginTop: '1rem', cursor: 'pointer' }} onClick={() => setShowPaymentModal(false)}>Cancel Payment</button>}
+            {/* 💰 TRANSACTION SUMMARY */}
+            <div className="glass-panel" style={{ padding: '3rem', borderTop: '4px solid var(--secondary)' }}>
+                <h2 style={{ marginBottom: '2rem' }}>Ledger Summary</h2>
+                {error && <div className="error-text" style={{ padding: '0.8rem', borderLeft: '4px solid var(--vivid-pink)', marginBottom: '2rem' }}>{error}</div>}
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+                    <span style={{ opacity: 0.6 }}>Slots Authorized</span>
+                    <strong>x{attendees.length}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+                    <span style={{ opacity: 0.6 }}>Price Per Slot</span>
+                    <strong>₹{event.price}</strong>
+                </div>
+                
+                <div style={{ borderTop: '2px dashed var(--glass-border)', margin: '2rem 0', paddingTop: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                        <span style={{ fontWeight: '900', letterSpacing: '1px' }}>TOTAL COST</span>
+                        <div style={{ fontSize: '2rem', fontWeight: '950', color: 'var(--success)' }}>₹{event.price * attendees.length}</div>
+                    </div>
+                    <button 
+                        className="btn-primary" 
+                        onClick={handleBooking} 
+                        disabled={loading}
+                        style={{ height: '60px', fontSize: '1.1rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)' }}
+                    >
+                        {loading ? 'CONFIRMING TRANSACTION...' : 'AUTHORIZE ENTRY'}
+                    </button>
+                    <p style={{ textAlign: 'center', opacity: 0.4, fontSize: '0.7rem', marginTop: '1.5rem' }}>* By authorizing, you agree to the TechFest cloud participation protocols.</p>
+                </div>
             </div>
         </div>
-      )}
-
-      {/* REAL TICKET SUCCESS MODAL */}
-      {showSuccessModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '420px', background: 'transparent', border: 'none', boxShadow: 'none' }}>
-            <div className="real-ticket page-transition">
-              <div className="ticket-header">
-                <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>OFFICIAL EVENT PASS</div>
-                <h3 style={{ margin: 0 }}>{ticketSummary.eventName}</h3>
-                <div className="status-badge-verified" style={{ marginTop: '0.8rem', display: 'inline-block' }}>CONFIRMED</div>
-              </div>
-
-              <div className="ticket-cut ticket-cut-left"></div>
-              <div className="ticket-cut ticket-cut-right"></div>
-
-              <div className="ticket-details">
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                    <div>
-                        <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{ticketSummary.id}</div>
-                    </div>
-                    <div>
-                        <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{ticketSummary.ticketsBooked} Person(s)</div>
-                    </div>
-                 </div>
-                 <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ATTENDEES</small>
-                 <div style={{ fontSize: '0.8rem', marginTop: '0.3rem' }}>
-                    {ticketSummary.attendees.map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
-                 </div>
-              </div>
-
-              <div className="real-qr-container">
-                 <div className="qr-frame">
-                    <img className="qr-image" 
-                         src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TICKET_VERIFIED_ID_${ticketSummary.id}_VAL_${ticketSummary.totalAmount}`} 
-                         alt="Real Ticket QR" />
-                 </div>
-                 <div style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: '0.8rem' }}>SCAN TO VERIFY ENTRY</div>
-              </div>
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                <button className="btn-primary" onClick={() => navigate('/dashboard')}>Go to My Dashboard</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
