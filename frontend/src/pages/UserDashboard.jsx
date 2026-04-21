@@ -45,8 +45,8 @@ const UserDashboard = () => {
             api.booking.get(`/user/${user.id}`),
             // hits /api/users/{id}/notifications
             api.user.get(`/${user.id}/notifications`),
-            // hits /api/events/
-            api.event.get(`/`)
+            // hits /api/events
+            api.event.get('')
         ]);
         setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
         setNotifications(Array.isArray(notifyRes.data) ? notifyRes.data : []);
@@ -67,7 +67,7 @@ const UserDashboard = () => {
     try {
         const ids = JSON.parse(localStorage.getItem('wishlist') || '[]');
         if (ids.length > 0) {
-            const res = await api.event.get('/');
+            const res = await api.event.get('');
             setWishlistEvents(res.data.filter(e => ids.includes(e.id)));
         }
     } catch (e) {}

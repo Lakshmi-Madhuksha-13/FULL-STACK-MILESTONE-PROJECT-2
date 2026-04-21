@@ -9,7 +9,7 @@ const Home = () => {
   useEffect(() => {
     const fetchStats = async () => {
         try {
-            const res = await api.event.get('/events');
+            const res = await api.event.get('');
             const deptStats = {};
             res.data.forEach(ev => {
                 const dept = ev.department.toUpperCase();

@@ -16,18 +16,15 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       if (activeTab === 'events') {
-        // hits /api/events/
-        const res = await api.event.get('/');
+        const res = await api.event.get('');
         setEvents(res.data);
       } else if (activeTab === 'users') {
-        // hits /api/users/
-        const res = await api.user.get('/');
+        const res = await api.user.get('');
         setUsers(res.data);
       } else if (activeTab === 'bookings') {
-        // hits /api/bookings/ and /api/events/
         const [bookingsRes, eventsRes] = await Promise.all([
-          api.booking.get('/'),
-          api.event.get('/')
+          api.booking.get(''),
+          api.event.get('')
         ]);
         setBookings(bookingsRes.data);
         setEvents(eventsRes.data);
