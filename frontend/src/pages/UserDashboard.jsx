@@ -11,7 +11,7 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('bookings'); 
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [wishlistEvents, setWishlistEvents] = useState([]);
-  const [countdown, setCountdown] = useState('');
+  const [countdown, setCountdown] = useState({ text: 'No Upcoming Events', target: null });
   const [showCertificate, setShowCertificate] = useState(false);
   const [status, setStatus] = useState({ bookings: 'loading', notifications: 'loading', events: 'loading' });
 
@@ -32,29 +32,25 @@ const UserDashboard = () => {
 
   useEffect(() => {
     if (user) {
-        calculateCountdown();
         const timer = setInterval(calculateCountdown, 1000);
         fetchWishlist();
         return () => clearInterval(timer);
     }
-  }, [bookings, user]);
+  }, [bookings, allEvents, user]);
 
   const fetchAllData = async () => {
-    // 1. Fetch Bookings
     try {
         const res = await api.booking.get(`/user/${user.id}`);
         setBookings(Array.isArray(res.data) ? res.data : []);
         setStatus(prev => ({...prev, bookings: 'online'}));
     } catch (e) { setStatus(prev => ({...prev, bookings: 'offline'})); }
 
-    // 2. Fetch Notifications
     try {
         const res = await api.user.get(`/${user.id}/notifications`);
         setNotifications(Array.isArray(res.data) ? res.data : []);
         setStatus(prev => ({...prev, notifications: 'online'}));
     } catch (e) { setStatus(prev => ({...prev, notifications: 'offline'})); }
 
-    // 3. Fetch Events (for naming)
     try {
         const res = await api.event.get('');
         setAllEvents(res.data);
@@ -66,8 +62,7 @@ const UserDashboard = () => {
 
   const getEventName = (id) => {
     const ev = allEvents.find(e => e.id === id);
-    if (!ev) return status.events === 'online' ? `Code: #${id}` : 'Connecting to Event Service...';
-    return ev.eventName;
+    return ev ? ev.eventName : `Event #${id}`;
   };
 
   const fetchWishlist = async () => {
@@ -81,15 +76,37 @@ const UserDashboard = () => {
   };
 
   const calculateCountdown = () => {
-    if (bookings.length === 0) return;
-    const target = new Date();
-    target.setDate(target.getDate() + 5);
-    const diff = target - new Date();
+    if (bookings.length === 0 || allEvents.length === 0) {
+        setCountdown({ text: 'No Upcoming Events', target: null });
+        return;
+    }
+
+    // Find the dates of all booked events
+    const eventDates = bookings.map(b => {
+        const ev = allEvents.find(e => e.id === b.eventId);
+        if (!ev) return null;
+        const date = new Date(ev.dateTime);
+        return isNaN(date.getTime()) ? null : { date, name: ev.eventName };
+    }).filter(d => d !== null && d.date > new Date());
+
+    if (eventDates.length === 0) {
+        setCountdown({ text: 'Events Completed!', target: 'All Completed' });
+        return;
+    }
+
+    // Sort to find the closest one
+    const closest = eventDates.sort((a, b) => a.date - b.date)[0];
+    const diff = closest.date - new Date();
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const mins = Math.floor((diff / 1000 / 60) % 60);
     const secs = Math.floor((diff / 1000) % 60);
-    setCountdown(`${days}d ${hours}h ${mins}m ${secs}s`);
+
+    setCountdown({ 
+        text: `${days}d ${hours}h ${mins}m ${secs}s`, 
+        target: closest.name 
+    });
   };
 
   const handleExportCalendar = (b) => {
@@ -120,34 +137,35 @@ const UserDashboard = () => {
 
   return (
     <div className="app-container page-transition">
-      {/* SERVICE HEALTH CHECK (Admin-Style UI) */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', fontSize: '0.65rem', justifyContent: 'flex-end' }}>
           <span style={{ color: status.bookings === 'online' ? 'var(--success)' : 'var(--accent)' }}>● BOOKING SERVICE</span>
           <span style={{ color: status.events === 'online' ? 'var(--success)' : 'var(--accent)' }}>● EVENT DB</span>
           <span style={{ color: status.notifications === 'online' ? 'var(--success)' : 'var(--accent)' }}>● NOTIFICATION HUB</span>
       </div>
 
-      {bookings.length > 0 && (
+      {countdown.target && (
           <div className="glass-panel" style={{ background: 'linear-gradient(90deg, var(--primary), var(--secondary))', padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                  <h4 style={{ margin: 0, opacity: 0.8, fontSize: '0.8rem' }}>NEXT EVENT COMMENCES IN</h4>
-                  <div style={{ fontSize: '2.5rem', fontWeight: '900' }}>{countdown}</div>
+                  <h4 style={{ margin: 0, opacity: 0.8, fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                    Next Event: {countdown.target === 'All Completed' ? 'All Festivities Finished' : countdown.target}
+                  </h4>
+                  <div style={{ fontSize: '2.5rem', fontWeight: '900' }}>{countdown.text}</div>
               </div>
               <div style={{ fontSize: '3rem' }}>🎉</div>
           </div>
       )}
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>Bookings</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'wishlist' ? 1 : 0.6 }} onClick={() => setActiveTab('wishlist')}>Wishlist ⭐</button>
-        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'notifications' ? 1 : 0.6 }} onClick={() => setActiveTab('notifications')}>Alerts ({notifications.filter(n => !n.read).length})</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'bookings' ? 1 : 0.6 }} onClick={() => setActiveTab('bookings')}>My Bookings</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'wishlist' ? 1 : 0.6 }} onClick={() => setActiveTab('wishlist')}>Stellar Events ⭐</button>
+        <button className="btn-primary" style={{ width: 'auto', opacity: activeTab === 'notifications' ? 1 : 0.6 }} onClick={() => setActiveTab('notifications')}>System Alerts ({notifications.filter(n => !n.read).length})</button>
       </div>
 
       <div className="glass-panel">
         {activeTab === 'bookings' ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 className="gradient-text">Ticket Inventory</h2>
+                <h2 className="gradient-text">Ticket Inventory & Certificates</h2>
                 {status.bookings === 'offline' && <small style={{ color: 'var(--accent)' }}>Trying to connect to system...</small>}
             </div>
             
@@ -157,8 +175,8 @@ const UserDashboard = () => {
                     <tr>
                     <th style={{ padding: '1rem' }}>BOOKING ID</th>
                     <th style={{ padding: '1rem' }}>EVENT NAME</th>
-                    <th style={{ padding: '1rem' }}>TICKETS</th>
-                    <th style={{ padding: '1rem' }}>REVENUE</th>
+                    <th style={{ padding: '1rem' }}>SLOTS</th>
+                    <th style={{ padding: '1rem' }}>TOTAL</th>
                     <th style={{ padding: '1rem' }}>ACTION</th>
                     </tr>
                 </thead>
@@ -170,12 +188,13 @@ const UserDashboard = () => {
                         <td style={{ padding: '1rem' }}>{b.ticketsBooked} Slot(s)</td>
                         <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
                         <td style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
-                            <button className="btn-elite" onClick={() => setSelectedBooking(b)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto' }}>View Pass</button>
+                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(false); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto' }}>View Pass</button>
+                            <button className="btn-elite" onClick={() => { setSelectedBooking(b); setShowCertificate(true); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', width: 'auto', background: 'var(--vivid-pink)' }}>Award</button>
                         </td>
                     </tr>
                     ))}
-                    {bookings.length === 0 && !loading && (
-                        <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>No active tickets in your inventory.</td></tr>
+                    {!loading && bookings.length === 0 && (
+                        <tr><td colSpan="5" style={{ padding: '3.5rem', textAlign: 'center', opacity: 0.5 }}>You haven't booked any experiences yet.</td></tr>
                     )}
                 </tbody>
                 </table>
@@ -183,14 +202,14 @@ const UserDashboard = () => {
           </>
         ) : activeTab === 'wishlist' ? (
             <div>
-                <h2 className="gradient-text">Starred Events ⭐</h2>
+                <h2 className="gradient-text">Stellar Events ⭐</h2>
                 <div className="elite-grid" style={{ marginTop: '2rem' }}>
                     {wishlistEvents.map(ev => (
                         <div key={ev.id} className="event-card">
                             <div className="innovative-badge">{ev.department}</div>
-                            <h4>{ev.eventName}</h4>
-                            <p>{ev.venue} | ₹{ev.price}</p>
-                            <button className="btn-primary" onClick={() => navigate(`/book/${ev.id}`)}>Book Now</button>
+                            <h4 style={{ margin: '1rem 0' }}>{ev.eventName}</h4>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>{ev.venue} | ₹{ev.price}</p>
+                            <button className="btn-primary" onClick={() => navigate(`/book/${ev.id}`)}>Secure Slot</button>
                         </div>
                     ))}
                 </div>
@@ -205,7 +224,7 @@ const UserDashboard = () => {
                             <p style={{ margin: 0 }}>{n.message}</p>
                             <small style={{ color: 'var(--text-dim)' }}>{new Date(n.timestamp).toLocaleString()}</small>
                         </div>
-                        {!n.read && <button onClick={() => markAsRead(n.id)} style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>Mark Read</button>}
+                        {!n.read && <button onClick={() => markAsRead(n.id)} style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>Read</button>}
                     </div>
                 ))}
                 </div>
@@ -213,50 +232,76 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* DASHBOARD MODAL: PREMIUM ACCESS PASS */}
+      {/* DASHBOARD MODAL: PREMIUM ACCESS PASS / CERTIFICATE */}
       {selectedBooking && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{ maxWidth: '420px', background: 'transparent', border: 'none' }}>
-                    <div className="real-ticket">
-                    <div className="ticket-header">
-                        <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>SECURE ACCESS PASS</div>
-                        <h3 style={{ margin: 0 }}>{getEventName(selectedBooking.eventId)}</h3>
-                        <div className="status-badge-verified" style={{ marginTop: '0.8rem', display: 'inline-block' }}>BOOKED ✅</div>
-                    </div>
-                    <div className="ticket-cut ticket-cut-left"></div>
-                    <div className="ticket-cut ticket-cut-right"></div>
-                    <div className="ticket-details">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                            <div>
-                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
+              <div className="modal-content" style={{ maxWidth: showCertificate ? '750px' : '420px', background: 'transparent', border: 'none', boxShadow: 'none' }}>
+                
+                {showCertificate ? (
+                    <div className="certificate-paper page-transition" id="certificate-content" style={{ background: 'white', color: '#1e293b', border: '15px solid #1e293b', padding: '3rem', position: 'relative' }}>
+                        <div style={{ border: '2px solid #1e293b', padding: '3rem', textAlign: 'center' }}>
+                            <div style={{ color: 'var(--primary)', fontWeight: '900', fontSize: '0.8rem', letterSpacing: '4px', marginBottom: '1rem' }}>TECHFEST OFFICIAL RECOGNITION</div>
+                            <h1 style={{ fontSize: '3.5rem', color: '#0f172a', margin: '1rem 0' }}>CERTIFICATE</h1>
+                            <p style={{ letterSpacing: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>OF EXCELLENCE & PARTICIPATION</p>
+                            
+                            <div style={{ margin: '3rem 0' }}>
+                                <p style={{ fontStyle: 'italic', fontSize: '1.2rem' }}>This prestigious document is awarded to</p>
+                                <h2 style={{ fontSize: '2.5rem', color: 'var(--primary)', textTransform: 'uppercase', margin: '1.5rem 0' }}>{user.name}</h2>
+                                <p style={{ fontSize: '1.1rem' }}>for their exceptional participation and performance in the</p>
+                                <h3 style={{ color: '#1e293b', fontSize: '1.8rem' }}>{getEventName(selectedBooking.eventId).toUpperCase()}</h3>
                             </div>
-                            <div>
-                                <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{selectedBooking.ticketsBooked} Slot(s)</div>
-                            </div>
-                        </div>
-                        <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ATTENDEES</small>
-                        <div style={{ fontSize: '0.8rem' }}>
-                            {parseAttendees(selectedBooking.attendeeDetails).map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
-                        </div>
-                    </div>
-                    <div className="real-qr-container">
-                        <div className="qr-frame">
-                            <img className="qr-image" 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VERIFY_BK_${selectedBooking.id}`} 
-                                alt="QR Code" />
-                        </div>
-                    </div>
-                    </div>
 
-                    <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                            <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync Calendar</button>
-                            <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ Print Pass</button>
+                            <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Authenticated UID: TF-CERT-{selectedBooking.id}-{user.id}</p>
+                            
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4rem', padding: '0 2rem' }}>
+                                <div style={{ borderTop: '2px solid #0f172a', width: '180px', paddingTop: '0.8rem', fontWeight: 'bold' }}>Festival Registrar</div>
+                                <div style={{ borderTop: '2px solid #0f172a', width: '180px', paddingTop: '0.8rem', fontWeight: 'bold' }}>Technical Chair</div>
+                            </div>
                         </div>
-                        <button className="btn-primary" style={{ background: 'transparent', border: '1px solid white' }} onClick={() => setSelectedBooking(null)}>Close</button>
                     </div>
+                ) : (
+                    <div className="real-ticket">
+                        <div className="ticket-header">
+                            <div style={{ fontSize: '0.7rem', opacity: 0.8, letterSpacing: '2px', marginBottom: '0.5rem' }}>OFFICIAL EVENT ENTRY</div>
+                            <h3 style={{ margin: 0 }}>{getEventName(selectedBooking.eventId)}</h3>
+                            <div className="status-badge-verified" style={{ marginTop: '0.8rem', display: 'inline-block' }}>CONFIRMED</div>
+                        </div>
+                        <div className="ticket-cut ticket-cut-left"></div>
+                        <div className="ticket-cut ticket-cut-right"></div>
+                        <div className="ticket-details">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>TICKET ID</small>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>#TF-{selectedBooking.id}</div>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>ADMISSION</small>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{selectedBooking.ticketsBooked} Slot(s)</div>
+                                </div>
+                            </div>
+                            <small style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 'bold' }}>REGISTERED ATTENDEES</small>
+                            <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                {parseAttendees(selectedBooking.attendeeDetails).map((a, i) => <div key={i}>• {a.name} ({a.department})</div>)}
+                            </div>
+                        </div>
+                        <div className="real-qr-container">
+                            <div className="qr-frame">
+                                <img className="qr-image" 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VALID_TOKEN_TF_${selectedBooking.id}`} 
+                                    alt="QR Access" />
+                            </div>
+                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: '0.8rem' }}>SCAN TO AUTHENTICATE</div>
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                        <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync Calendar</button>
+                        <button className="btn-elite" style={{ background: 'white', color: '#0f172a' }} onClick={() => window.print()}>📥 Download PDF</button>
+                    </div>
+                    <button className="btn-elite" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', width: '100%' }} onClick={() => { setSelectedBooking(null); setShowCertificate(false); }}>Close Menu</button>
+                </div>
               </div>
           </div>
       )}
