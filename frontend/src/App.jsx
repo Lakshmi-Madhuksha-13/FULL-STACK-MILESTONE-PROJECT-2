@@ -8,6 +8,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import EventBookingPage from './pages/EventBookingPage';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/book/:id" element={<EventBookingPage />} />
       </Routes>
       <ChatSupport />
