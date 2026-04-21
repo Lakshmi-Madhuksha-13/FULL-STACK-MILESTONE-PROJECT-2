@@ -8,7 +8,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import BookingPage from './pages/BookingPage';
+import EventBookingPage from './pages/EventBookingPage';
 
 function App() {
   return (
@@ -21,7 +21,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/book/:id" element={<BookingPage />} />
+        <Route path="/book/:id" element={<EventBookingPage />} />
       </Routes>
       <ChatSupport />
     </Router>
