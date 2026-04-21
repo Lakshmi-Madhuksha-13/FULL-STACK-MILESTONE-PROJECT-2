@@ -144,8 +144,7 @@ const UserDashboard = () => {
                     <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '1rem' }}>
                     <thead style={{ borderBottom: '1px solid var(--glass-border)' }}>
                         <tr>
-                        <th style={{ padding: '1rem' }}>ID</th>
-                        <th style={{ padding: '1rem' }}>Event</th>
+                        <th style={{ padding: '1rem' }}>Event Name</th>
                         <th style={{ padding: '1rem' }}>Tickets</th>
                         <th style={{ padding: '1rem' }}>Total Paid</th>
                         <th style={{ padding: '1rem' }}>Action</th>
@@ -154,7 +153,6 @@ const UserDashboard = () => {
                     <tbody>
                         {bookings.map(b => (
                         <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <td style={{ padding: '1rem' }}>#{b.id}</td>
                             <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--primary)' }}>{getEventName(b.eventId)}</td>
                             <td style={{ padding: '1rem' }}>{b.ticketsBooked}</td>
                             <td style={{ padding: '1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount}</td>
