@@ -21,10 +21,15 @@ const AdminDashboard = () => {
     try { return JSON.parse(localStorage.getItem('currentUser')); } catch(e) { return null; }
   });
 
+  // 🚀 INSTANT TAB SYNC: Fetch support immediately when tab changes
+  useEffect(() => {
+    if (activeTab === 'support') fetchSupport();
+  }, [activeTab]);
+
   useEffect(() => {
     if (currentUser && currentUser.role === 'ADMIN') {
         fetchAllData().then(() => setIsDataLoaded(true));
-        const interval = setInterval(fetchAllData, 10000); 
+        const interval = setInterval(fetchAllData, 8000); 
         return () => clearInterval(interval);
     }
   }, [currentUser?.id]);
@@ -63,24 +68,13 @@ const AdminDashboard = () => {
     } catch (e) {}
   };
 
-  const handleAddEvent = async (e) => {
-    e.preventDefault();
-    try {
-        await api.event.post('', {...newEvent, availableTickets: newEvent.totalTickets});
-        setNewEvent({ eventName: '', department: '', dateTime: '', venue: '', price: 0, totalTickets: 50, availableTickets: 50 });
-        showInteractiveToast("New System Asset Deployed Successfully", "success");
-        fetchAllData();
-    } catch (err) { showInteractiveToast("Deployment Failed", "error"); }
-  };
-
-  const handleUpdateEvent = async (e) => {
-    e.preventDefault();
-    try {
-        await api.event.put(`/${editingEvent.id}`, editingEvent);
-        setEditingEvent(null);
-        showInteractiveToast("Event Asset Reconfigured Successfully", "success");
-        fetchAllData();
-    } catch (err) { showInteractiveToast("Reconfiguration Failed", "error"); }
+  const handleSendReply = async (uId) => {
+    if (!replyMessage.trim()) return;
+    const msg = { userId: uId, senderName: 'Admin Support', message: replyMessage, type: 'ADMIN' };
+    await api.support.post('/send', msg);
+    setReplyMessage('');
+    showInteractiveToast("Support Response Dispatched", "success");
+    fetchSupport();
   };
 
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
@@ -103,7 +97,7 @@ const AdminDashboard = () => {
       <div style={{ marginBottom: '3rem' }}>
         <h1 className="gradient-text" style={{ fontSize: '3rem', margin: 0, fontWeight: '900', letterSpacing: '-2px' }}>Event Management Console</h1>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-            <span style={{ color: status.events === 'online' ? 'var(--success)' : 'var(--accent)', fontWeight: 'bold', fontSize: '0.7rem', letterSpacing: '1px' }}>● SYSTEM CORE STATUS: ACTIVE</span>
+            <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '0.7rem', letterSpacing: '1px' }}>● SYSTEM CORE STATUS: ACTIVE</span>
         </div>
       </div>
 
@@ -124,7 +118,7 @@ const AdminDashboard = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '1.2rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-        <button className="btn-tab-elite" style={activeTab === 'events' ? activeEliteTab : null} onClick={() => {setActiveTab('events'); setEditingEvent(null);}}>Deployment & Configuration</button>
+        <button className="btn-tab-elite" style={activeTab === 'events' ? activeEliteTab : null} onClick={() => {setActiveTab('events'); setEditingEvent(null);}}>Configuration Hub</button>
         <button className="btn-tab-elite" style={activeTab === 'users' ? activeEliteTab : null} onClick={() => setActiveTab('users')}>Member Registry</button>
         <button className="btn-tab-elite" style={activeTab === 'bookings' ? activeEliteTab : null} onClick={() => setActiveTab('bookings')}>Financial Audit</button>
         <button className="btn-tab-elite" style={{...(activeTab === 'support' ? activeEliteTab : null), background: 'var(--vivid-pink)'}} onClick={() => setActiveTab('support')}>Support Center</button>
@@ -136,51 +130,31 @@ const AdminDashboard = () => {
             {editingEvent ? (
                 <div style={{ marginBottom: '3rem', padding: '2rem', background: 'rgba(139, 92, 246, 0.05)', borderRadius: '1rem', border: '1px solid var(--primary)' }}>
                     <h3 className="gradient-text" style={{ marginBottom: '1.5rem' }}>Reconfiguring Event Asset: ID #{editingEvent.id}</h3>
-                    <form onSubmit={handleUpdateEvent} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.2rem' }}>
-                        <div><label style={labelStyle}>Mission Name</label><input type="text" className="form-control" value={editingEvent.eventName} onChange={e => setEditingEvent({...editingEvent, eventName: e.target.value})} required/></div>
-                        <div><label style={labelStyle}>Department</label><input type="text" className="form-control" value={editingEvent.department} onChange={e => setEditingEvent({...editingEvent, department: e.target.value})} /></div>
-                        <div><label style={labelStyle}>Schedule Date/Time</label><input type="text" className="form-control" value={editingEvent.dateTime} onChange={e => setEditingEvent({...editingEvent, dateTime: e.target.value})} /></div>
-                        <div><label style={labelStyle}>Venue Location</label><input type="text" className="form-control" value={editingEvent.venue} onChange={e => setEditingEvent({...editingEvent, venue: e.target.value})} /></div>
-                        <div><label style={labelStyle}>Asset Price (₹)</label><input type="number" className="form-control" value={editingEvent.price} onChange={e => setEditingEvent({...editingEvent, price: parseFloat(e.target.value)})} /></div>
-                        <div><label style={labelStyle}>Capacity Slots</label><input type="number" className="form-control" value={editingEvent.totalTickets} onChange={e => setEditingEvent({...editingEvent, totalTickets: parseInt(e.target.value)})} /></div>
-                        
-                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                            <button type="submit" className="btn-primary" style={{ flex: 1 }}>Sync Reconfiguration</button>
-                            <button type="button" className="btn-elite" onClick={() => setEditingEvent(null)} style={{ flex: 0.3 }}>Abort Changes</button>
-                        </div>
+                    <form onSubmit={(e) => { e.preventDefault(); api.event.put(`/${editingEvent.id}`, editingEvent).then(() => { setEditingEvent(null); fetchAllData(); showInteractiveToast("Sync Successful"); }); }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.2rem' }}>
+                        <input type="text" className="form-control" value={editingEvent.eventName} onChange={e => setEditingEvent({...editingEvent, eventName: e.target.value})} required/>
+                        <input type="text" className="form-control" value={editingEvent.venue} onChange={e => setEditingEvent({...editingEvent, venue: e.target.value})} />
+                        <input type="number" className="form-control" value={editingEvent.price} onChange={e => setEditingEvent({...editingEvent, price: parseFloat(e.target.value)})} />
+                        <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2' }}>Sync Reconfiguration</button>
                     </form>
                 </div>
             ) : (
                 <div style={{ marginBottom: '3rem' }}>
                     <h3 className="gradient-text" style={{ marginBottom: '1.5rem' }}>Deploy New Technical Event</h3>
                     <form onSubmit={handleAddEvent} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.2rem' }}>
-                        <input type="text" placeholder="Event Name (e.g., Codeathon)" className="form-control" value={newEvent.eventName} onChange={e => setNewEvent({...newEvent, eventName: e.target.value})} required/>
-                        <input type="text" placeholder="Target Department" className="form-control" value={newEvent.department} onChange={e => setNewEvent({...newEvent, department: e.target.value})} />
-                        <input type="text" placeholder="Date & Time (YYYY-MM-DD HH:mm)" className="form-control" value={newEvent.dateTime} onChange={e => setNewEvent({...newEvent, dateTime: e.target.value})} />
-                        <input type="text" placeholder="Campus Venue / Lab" className="form-control" value={newEvent.venue} onChange={e => setNewEvent({...newEvent, venue: e.target.value})} />
-                        <input type="number" placeholder="Registration Fee" className="form-control" value={newEvent.price || ''} onChange={e => setNewEvent({...newEvent, price: parseFloat(e.target.value)})} />
-                        <input type="number" placeholder="Participant Capacity" className="form-control" value={newEvent.totalTickets || ''} onChange={e => setNewEvent({...newEvent, totalTickets: parseInt(e.target.value)})} />
-                        <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2', height: '55px' }}>INITIATE WORLD-WIDE DEPLOYMENT</button>
+                        <input type="text" placeholder="Event Name" className="form-control" value={newEvent.eventName} onChange={e => setNewEvent({...newEvent, eventName: e.target.value})} required/>
+                        <input type="number" placeholder="Fee (₹)" className="form-control" value={newEvent.price || ''} onChange={e => setNewEvent({...newEvent, price: parseFloat(e.target.value)})} />
+                        <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2' }}>INITIATE DEPLOYMENT</button>
                     </form>
                 </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h4 style={{ opacity: 0.6, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '2px' }}>Live System Assets</h4>
                 {events.map(ev => (
-                  <div key={ev.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                    <div>
-                        <div style={{ fontWeight: '900', fontSize: '1.2rem', color: 'var(--primary)' }}>{ev.eventName}</div>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>{ev.venue} • {ev.dateTime}</div>
-                    </div>
+                  <div key={ev.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.2rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                    <div><strong>{ev.eventName}</strong><br/><small style={{ opacity: 0.5 }}>{ev.venue} • {ev.price}₹</small></div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button className="btn-elite" onClick={() => setEditingEvent(ev)}>RECONFIGURE</button>
-                        <button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => {
-                            if(window.confirm(`Permanently terminate "${ev.eventName}"? This action is irreversible.`)) {
-                                api.event.delete(`/${ev.id}`).then(fetchAllData);
-                                showInteractiveToast("System Asset Purged", "info");
-                            }
-                        }}>TERMINATE</button>
+                        <button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => { if(window.confirm("Delete?")) api.event.delete(`/${ev.id}`).then(fetchAllData); }}>TERMINATE</button>
                     </div>
                   </div>
                 ))}
@@ -188,9 +162,78 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {(activeTab === 'users' || activeTab === 'bookings') && isDataLoaded && (
-            <div className="page-transition" style={{ overflowX: 'auto' }}>
-                {activeTab === 'users' ? renderUserRegistry(users, fetchAllData, showInteractiveToast) : renderAuditLog(bookings, events, fetchAllData, showInteractiveToast)}
+        {activeTab === 'users' && (
+          <div className="page-transition">
+             <h2 className="gradient-text">Member Base Registry</h2>
+             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '2rem' }}>
+                  <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.75rem', opacity: 0.5 }}><tr><th>MEMBER ID</th><th>IDENTIFIER</th><th>CURRENT STATUS</th><th>ACTION</th></tr></thead>
+                  <tbody>
+                    {users.map(u => (
+                        <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <td style={{ padding: '1.5rem 1rem', fontWeight: 'bold' }}>USR-{u.id}</td>
+                            <td style={{ padding: '1.5rem 1rem' }}>{u.name}<br/><small style={{opacity: 0.5}}>{u.email}</small></td>
+                            <td style={{ padding: '1.5rem 1rem' }}>
+                                {/* ACTIVITY PULSE: Simulating status based on recent actions or role */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: u.role === 'ADMIN' || bookings.some(b => b.userId === u.id) ? 'var(--success)' : '#4b5563', boxShadow: u.role === 'ADMIN' ? '0 0 10px var(--success)' : 'none' }}></span>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: u.role === 'ADMIN' || bookings.some(b => b.userId === u.id) ? 'var(--success)' : 'var(--text-dim)' }}>
+                                        {u.role === 'ADMIN' || bookings.some(b => b.userId === u.id) ? 'ACTIVE' : 'DORMANT'}
+                                    </span>
+                                </div>
+                            </td>
+                            <td style={{ padding: '1.5rem 1rem' }}>
+                                {u.role !== 'ADMIN' && <button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => { if(window.confirm("Purge?")) api.user.delete(`/${u.id}`).then(fetchAllData); }}>PURGE</button>}
+                            </td>
+                        </tr>
+                    ))}
+                  </tbody>
+             </table>
+          </div>
+        )}
+
+        {activeTab === 'bookings' && (
+            <div className="page-transition">
+                <h2 className="gradient-text">Financial Audit</h2>
+                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '2rem' }}>
+                    <thead style={{ borderBottom: '1px solid var(--glass-border)' }}><tr><th>TXN ID</th><th>ASSET</th><th>TOTAL</th><th>ACTION</th></tr></thead>
+                    <tbody>
+                        {bookings.map(b => (
+                            <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <td style={{ padding: '1.2rem' }}>#TF}-{b.id}</td>
+                                <td style={{ padding: '1.2rem' }}>{events.find(e => e.id === b.eventId)?.eventName || b.eventId}</td>
+                                <td style={{ padding: '1.2rem', color: 'var(--success)' }}>₹{b.totalAmount}</td>
+                                <td style={{ padding: '1.2rem' }}><button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => { if(window.confirm("Void?")) api.booking.delete(`/${b.id}`).then(fetchAllData); }}>VOID</button></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+
+        {activeTab === 'support' && (
+            <div className="page-transition" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
+                <div style={{ borderRight: '1px solid var(--glass-border)', paddingRight: '1rem' }}>
+                    {Object.keys(supportChats).length > 0 ? Object.keys(supportChats).map(uId => (
+                        <div key={uId} onClick={() => setSelectedUserChat(uId)} style={{ padding: '1.2rem', background: selectedUserChat === uId ? 'var(--primary)' : 'rgba(255,255,255,0.02)', borderRadius: '1rem', cursor: 'pointer', marginBottom: '0.8rem' }}>
+                            <div style={{ fontWeight: 'bold' }}>MEMBER ID: {uId}</div>
+                        </div>
+                    )) : <div style={{opacity: 0.3, textAlign: 'center', padding: '2rem'}}>NO TICKETS FOUND</div>}
+                </div>
+                <div>
+                    {selectedUserChat ? (
+                        <div style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {supportChats[selectedUserChat].map((m, i) => (
+                                    <div key={i} style={{ alignSelf: m.type === 'ADMIN' ? 'flex-end' : 'flex-start', background: m.type === 'ADMIN' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.8rem', borderRadius: '1rem', fontSize: '0.8rem' }}>{m.message}</div>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <input type="text" className="form-control" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendReply(selectedUserChat)} placeholder="Type reply..."/>
+                                <button className="btn-primary" style={{ width: '100px' }} onClick={() => handleSendReply(selectedUserChat)}>SEND</button>
+                            </div>
+                        </div>
+                    ) : <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.2 }}>SELECT A SUPPORT TICKET TO START CHAT</div>}
+                </div>
             </div>
         )}
       </div>
@@ -205,47 +248,6 @@ const AdminDashboard = () => {
   );
 };
 
-const renderUserRegistry = (users, fetchAllData, showInteractiveToast) => (
-    <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-        <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.75rem', opacity: 0.5 }}><tr><th>MEMBER ID</th><th>IDENTIFIER</th><th>CAPABILITY</th><th>ACTION</th></tr></thead>
-        <tbody>
-            {users.map(u => (
-                <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ padding: '1.5rem 1rem', fontWeight: 'bold' }}>USR-{u.id}</td>
-                    <td style={{ padding: '1.5rem 1rem' }}>{u.name}<br/><small>{u.email}</small></td>
-                    <td style={{ padding: '1.5rem 1rem' }}><span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>{u.role}</span></td>
-                    <td style={{ padding: '1.5rem 1rem' }}>
-                        {u.role !== 'ADMIN' && <button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => {
-                            if(window.confirm("Purge member?")) api.user.delete(`/${u.id}`).then(() => { fetchAllData(); showInteractiveToast("Member Erased", "info"); });
-                        }}>PURGE</button>}
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-);
-
-const renderAuditLog = (bookings, events, fetchAllData, showInteractiveToast) => (
-    <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-        <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.75rem', opacity: 0.5 }}><tr><th>TXN ID</th><th>ASSET</th><th>GROSS TOTAL</th><th>ACTION</th></tr></thead>
-        <tbody>
-            {bookings.map(b => (
-                <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ padding: '1.5rem 1rem', fontWeight: 'bold' }}>#TF-{b.id}</td>
-                    <td style={{ padding: '1.5rem 1rem' }}>{events.find(e => e.id === b.eventId)?.eventName || `Asset ID: ${b.eventId}`}</td>
-                    <td style={{ padding: '1.5rem 1rem', color: 'var(--success)', fontWeight: 'bold' }}>₹{b.totalAmount.toLocaleString()}</td>
-                    <td style={{ padding: '1.5rem 1rem' }}>
-                        <button className="btn-elite" style={{ background: 'var(--accent)' }} onClick={() => {
-                            if(window.confirm("Void transaction?")) api.booking.delete(`/${b.id}`).then(() => { fetchAllData(); showInteractiveToast("Txn Voided", "info"); });
-                        }}>VOID</button>
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-);
-
-const labelStyle = { display: 'block', fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '0.5rem', opacity: 0.6 };
 const activeEliteTab = { background: 'var(--primary)', borderColor: 'var(--primary-bright)', boxShadow: '0 0 25px var(--primary-bright)' };
 
 export default AdminDashboard;
