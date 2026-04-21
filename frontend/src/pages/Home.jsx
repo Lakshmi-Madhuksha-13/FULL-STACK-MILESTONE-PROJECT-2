@@ -32,7 +32,7 @@ const Home = () => {
       <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '2rem 0', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '4rem 0' }}>
         <div style={{ display: 'inline-block', animation: 'ticker 30s linear infinite', fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-dim)' }}>
           <span style={{ margin: '0 3rem' }}>🔥 IIT MADRAS SHASTRATA REGISTRATIONS OPEN</span>
-          <span style={{ margin: '0 3rem' }}>⚡ TECHNOVA 2024 TICKETS SELLING FAST</span>
+          <span style={{ margin: '0 3rem' }}>⚡ TECHNOVA 2026 TICKETS SELLING FAST</span>
           <span style={{ margin: '0 3rem' }}>💎 NEW EVENT ADDED: WEB3 MASTERCLASS</span>
           <span style={{ margin: '0 3rem' }}>🚀 5000+ STUDENTS ALREADY JOINED</span>
         </div>
