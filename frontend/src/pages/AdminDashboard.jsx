@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('events'); 
@@ -16,15 +16,15 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       if (activeTab === 'events') {
-        const res = await axios.get('http://localhost:8082/api/events');
+        const res = await api.event.get('/events');
         setEvents(res.data);
       } else if (activeTab === 'users') {
-        const res = await axios.get('http://localhost:8081/api/users');
+        const res = await api.user.get('/');
         setUsers(res.data);
       } else if (activeTab === 'bookings') {
         const [bookingsRes, eventsRes] = await Promise.all([
-          axios.get('http://localhost:8083/api/bookings'),
-          axios.get('http://localhost:8082/api/events')
+          api.booking.get('/bookings'),
+          api.event.get('/events')
         ]);
         setBookings(bookingsRes.data);
         setEvents(eventsRes.data);
@@ -41,35 +41,35 @@ const AdminDashboard = () => {
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:8082/api/events', newEvent);
+    await api.event.post('/events', newEvent);
     setNewEvent({ eventName: '', department: '', dateTime: '', venue: '', price: 0, totalTickets: 0, availableTickets: 0 });
     fetchData();
   };
 
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
-    await axios.put(`http://localhost:8082/api/events/${editingEvent.id}`, editingEvent);
+    await api.event.put(`/events/${editingEvent.id}`, editingEvent);
     setEditingEvent(null);
     fetchData();
   };
 
   const handleDeleteEvent = async (id) => {
     if(window.confirm("CRITICAL: This will PERMANENTLY delete the event. Proceed?")) {
-      await axios.delete(`http://localhost:8082/api/events/${id}`);
+      await api.event.delete(`/events/${id}`);
       fetchData();
     }
   };
 
   const handleDeleteUser = async (id) => {
     if(window.confirm("Are you sure you want to delete this user?")) {
-      await axios.delete(`http://localhost:8081/api/users/${id}`);
+      await api.user.delete(`/${id}`);
       fetchData();
     }
   };
 
   const handleCancelBooking = async (id) => {
     if(window.confirm("ADMIN ACTION: Cancel this booking and notify user?")) {
-        await axios.delete(`http://localhost:8083/api/bookings/${id}`);
+        await api.booking.delete(`/bookings/${id}`);
         fetchData();
     }
   };

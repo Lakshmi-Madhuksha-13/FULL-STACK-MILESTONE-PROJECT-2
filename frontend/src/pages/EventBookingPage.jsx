@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import EventDetails from '../components/EventDetails';
 import BookingForm from '../components/BookingForm';
 
@@ -27,7 +27,7 @@ const EventBookingPage = () => {
   const fetchEvent = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
-      const response = await axios.get(`http://localhost:8082/api/events/${id}`);
+      const response = await api.event.get(`/events/${id}`);
       setEvent(response.data);
       setError('');
     } catch (err) {
@@ -48,11 +48,10 @@ const EventBookingPage = () => {
 
   const handleConfirmPayment = async () => {
     setIsProcessing(true);
-    // Simulate real gateway delay
     await new Promise(r => setTimeout(r, 2500));
     
     try {
-        const response = await axios.post('http://localhost:8083/api/bookings', pendingBookingData);
+        const response = await api.booking.post('/bookings', pendingBookingData);
         setTicketSummary({
             ...response.data,
             eventName: event.eventName,

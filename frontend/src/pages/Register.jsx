@@ -1,81 +1,83 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER', department: '', college: '' });
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER', department: '', collegeName: '' });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post('http://localhost:8081/api/users/register', formData);
-      // Auto login after register
-      localStorage.setItem('currentUser', JSON.stringify(response.data));
-      if (response.data.role === 'ADMIN') {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/';
-      }
-    } catch (err) {
-      if (err.response?.data === "Email is already registered") {
-        setError("Email already exists, please login instead.");
-      } else {
-        setError(err.response?.data || 'Registration failed');
-      }
-    }
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            await api.user.post('/', formData);
+            navigate('/login', { state: { message: 'Registration successful! Please login.' } });
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '85vh' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '450px' }}>
-        <h2 className="gradient-text" style={{ textAlign: 'center' }}>Registration</h2>
-        
-        {error && <div className="error-text" style={{ padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', marginBottom: '1rem' }}>{error}</div>}
-        
-        <form onSubmit={handleRegister}>
-          <div className="form-group">
-            <label>Full Name</label>
-            <input type="text" required className="form-control" onChange={(e) => setFormData({...formData, name: e.target.value})} />
-          </div>
+    return (
+        <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem 0' }}>
+            <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '3rem' }}>
+                <h2 className="gradient-text" style={{ textAlign: 'center', marginBottom: '2rem' }}>Registry.</h2>
+                
+                {error && <div className="error-text" style={{ marginBottom: '1.5rem', padding: '0.8rem' }}>{error}</div>}
+                
+                <form onSubmit={handleSubmit}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>FULL NAME</label>
+                            <input type="text" className="form-control" placeholder="John Doe" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>ACCOUNT TYPE</label>
+                            <select className="form-control" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                                <option value="USER" style={{background: '#0f172a'}}>Student Participant</option>
+                                <option value="ADMIN" style={{background: '#0f172a'}}>Fest Administrator</option>
+                            </select>
+                        </div>
+                    </div>
 
-          {formData.role === 'USER' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="form-group">
-                  <label>Department</label>
-                  <input type="text" placeholder="e.g. CSE" className="form-control" onChange={(e) => setFormData({...formData, department: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label>College Name</label>
-                  <input type="text" placeholder="e.g. Vel Tech" className="form-control" onChange={(e) => setFormData({...formData, college: e.target.value})} />
-                </div>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>OFFICIAL EMAIL</label>
+                        <input type="email" className="form-control" placeholder="name@university.edu" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
+                    </div>
+
+                    {formData.role !== 'ADMIN' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>DEPARTMENT</label>
+                                <input type="text" className="form-control" placeholder="CSE / IT" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} required />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>COLLEGE</label>
+                                <input type="text" className="form-control" placeholder="University Name" value={formData.collegeName} onChange={(e) => setFormData({...formData, collegeName: e.target.value})} required />
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ marginBottom: '2.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>SECURE PASSWORD</label>
+                        <input type="password" className="form-control" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+                    </div>
+
+                    <button type="submit" className="btn-primary" disabled={loading}>
+                        {loading ? 'Creating Account...' : 'Complete Registration'}
+                    </button>
+                    
+                    <p style={{ textAlign: 'center', marginTop: '2rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                        Already registered? <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 'bold' }}>Sign In</Link>
+                    </p>
+                </form>
             </div>
-          )}
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" required className="form-control" onChange={(e) => setFormData({...formData, email: e.target.value})} />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" required className="form-control" onChange={(e) => setFormData({...formData, password: e.target.value})} />
-          </div>
-          <div className="form-group">
-            <label>Account Type</label>
-            <select className="form-control" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
-              <option value="USER">Participant</option>
-              <option value="ADMIN">Administrator</option>
-            </select>
-          </div>
-          <button type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>Create Account</button>
-        </form>
-        
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-secondary)' }}>
-          Already have an account? <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>Login here</Link>
-        </p>
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default Register;

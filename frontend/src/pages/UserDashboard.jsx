@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const UserDashboard = () => {
@@ -41,9 +41,9 @@ const UserDashboard = () => {
   const fetchData = async () => {
       try {
         const [bookingsRes, notifyRes, eventsRes] = await Promise.all([
-            axios.get(`http://localhost:8083/api/bookings/user/${user.id}`),
-            axios.get(`http://localhost:8081/api/users/${user.id}/notifications`),
-            axios.get(`http://localhost:8082/api/events`)
+            api.booking.get(`/bookings/user/${user.id}`),
+            api.user.get(`/${user.id}/notifications`),
+            api.event.get(`/events`)
         ]);
         setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
         setNotifications(Array.isArray(notifyRes.data) ? notifyRes.data : []);
@@ -64,7 +64,7 @@ const UserDashboard = () => {
     try {
         const ids = JSON.parse(localStorage.getItem('wishlist') || '[]');
         if (ids.length > 0) {
-            const res = await axios.get('http://localhost:8082/api/events');
+            const res = await api.event.get('/events');
             setWishlistEvents(res.data.filter(e => ids.includes(e.id)));
         }
     } catch (e) {}
@@ -94,7 +94,7 @@ const UserDashboard = () => {
   };
 
   const markAsRead = async (id) => {
-    await axios.put(`http://localhost:8081/api/users/notifications/${id}/read`);
+    await api.user.put(`/notifications/${id}/read`);
     fetchData();
   };
 
@@ -251,7 +251,7 @@ const UserDashboard = () => {
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                         <button className="btn-primary" onClick={() => handleExportCalendar(selectedBooking)}>📅 Sync to Calendar</button>
-                        <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ {showCertificate ? 'Print Certificate' : 'Print Ticket'}</button>
+                        <button className="btn-elite" style={{ background: '#f8fafc', color: '#0f172a' }} onClick={() => window.print()}>🖨️ Print</button>
                     </div>
                     <button className="btn-primary" style={{ background: 'transparent', border: '1px solid white' }} onClick={() => { setSelectedBooking(null); setShowCertificate(false); }}>Close</button>
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -9,7 +9,7 @@ const Home = () => {
   useEffect(() => {
     const fetchStats = async () => {
         try {
-            const res = await axios.get('http://localhost:8082/api/events');
+            const res = await api.event.get('/events');
             const deptStats = {};
             res.data.forEach(ev => {
                 const dept = ev.department.toUpperCase();
@@ -77,7 +77,7 @@ const Home = () => {
       </div>
 
       {/* Features Grid */}
-      <h2 style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '2.5rem' }}>Engineered for Performance.</h2>
+      <h2 style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '2.5rem', marginTop: '4rem' }}>Engineered for Performance.</h2>
       <div className="elite-grid">
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>

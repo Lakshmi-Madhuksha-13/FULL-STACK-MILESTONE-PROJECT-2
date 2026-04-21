@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
@@ -27,7 +27,7 @@ const EventsPage = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8082/api/events');
+      const response = await api.event.get('/events');
       setEvents(response.data);
     } catch (err) {
       setError('Connection failed. Microservices offline.');
