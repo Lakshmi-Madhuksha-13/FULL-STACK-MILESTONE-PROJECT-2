@@ -5,101 +5,122 @@ import api from '../services/api';
 const Home = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-        try {
-            const res = await api.event.get('');
-            const deptStats = {};
-            res.data.forEach(ev => {
-                const dept = ev.department.toUpperCase();
-                deptStats[dept] = (deptStats[dept] || 0) + (ev.totalTickets - ev.availableTickets);
-            });
-            const sorted = Object.entries(deptStats)
-                .sort((a,b) => b[1] - a[1])
-                .slice(0, 3);
-            setStats(sorted);
-        } catch (e) {}
+    const fetchStats = () => {
+        api.event.get('')
+            .then(res => {
+                if (res.data && Array.isArray(res.data)) {
+                    const deptStats = {};
+                    res.data.forEach(ev => {
+                        if (ev && ev.department) {
+                            const dept = ev.department.toUpperCase();
+                            deptStats[dept] = (deptStats[dept] || 0) + (ev.totalTickets - ev.availableTickets);
+                        }
+                    });
+                    const sorted = Object.entries(deptStats)
+                        .sort((a,b) => b[1] - a[1])
+                        .slice(0, 3);
+                    setStats(sorted);
+                }
+            })
+            .catch(() => console.log("System Status: Synchronizing Cloud Analytics..."))
+            .finally(() => setIsLoading(false));
     };
     fetchStats();
   }, []);
 
   return (
-    <div className="app-container page-transition">
-      {/* Hero Section */}
+    <div className="app-container page-transition" style={{ minHeight: '100vh' }}>
+      {/* 🚀 HERO SECTION */}
       <section style={{ textAlign: 'center', padding: '6rem 0 4rem 0' }}>
-        <div style={{ display: 'inline-block', padding: '0.5rem 1rem', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid var(--primary)', borderRadius: '2rem', marginBottom: '2rem', fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-          ✨ The Future of Campus Fests is Here
+        <div className="bounce-in" style={{ display: 'inline-block', padding: '0.6rem 1.2rem', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid var(--primary)', borderRadius: '2rem', marginBottom: '2.5rem', fontSize: '0.8rem', fontWeight: '900', color: 'var(--primary)', letterSpacing: '2px' }}>
+          ✨ EVOLVING THE CAMPUS EXPERIENCE
         </div>
-        <h1 className="gradient-text" style={{ fontSize: '5rem', lineHeight: '1', marginBottom: '1.5rem', transition: '0.3s' }}>
+        <h1 className="gradient-text" style={{ fontSize: '5.5rem', lineHeight: '0.9', marginBottom: '2.5rem', letterSpacing: '-3px' }}>
           Ignite Your Technical <br/> Excellence.
         </h1>
-        <p style={{ color: 'var(--text-dim)', fontSize: '1.4rem', maxWidth: '700px', margin: '0 auto 3rem auto', lineHeight: '1.6' }}>
-          The all-in-one portal to discover, book, and participate in India's most prestigious technical festivals.
+        <p style={{ color: 'var(--text-dim)', fontSize: '1.3rem', maxWidth: '750px', margin: '0 auto 4rem auto', lineHeight: '1.7', opacity: 0.8 }}>
+          The all-in-one portal to discover, book, and participate in the nation's most prestigious technical festivals. Built for the next generation of engineers.
         </p>
         
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
-          <button className="btn-elite" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem' }} onClick={() => navigate('/events')}>
-            Explore Fests 🚀
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+          <button className="btn-elite" style={{ padding: '1.4rem 3.5rem', fontSize: '1.1rem', background: 'var(--primary)', boxShadow: '0 0 30px var(--primary-bright)' }} onClick={() => navigate('/events')}>
+            Launch Discovery 🚀
           </button>
-          <button className="btn-elite" style={{ background: 'transparent', border: '1px solid var(--glass-border)', padding: '1.2rem 2.5rem', boxShadow: 'none' }} onClick={() => navigate('/register')}>
+          <button className="btn-elite" style={{ background: 'transparent', border: '1px solid var(--glass-border)', padding: '1.4rem 3rem', boxShadow: 'none' }} onClick={() => navigate('/register')}>
             Join Community
           </button>
         </div>
       </section>
 
-      {/* Innovation: Live Ticker */}
-      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '1.5rem 0', background: 'var(--glass-bg)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '4rem 0' }}>
-        <div style={{ display: 'inline-block', animation: 'ticker 30s linear infinite', fontSize: '1rem', fontWeight: '800', color: 'var(--text-dim)', letterSpacing: '1px' }}>
-          <span style={{ margin: '0 3rem' }}>🔥 IIT MADRAS SHASTRATA REGISTRATIONS OPEN</span>
-          <span style={{ margin: '0 3rem' }}>⚡ TECHNOVA 2026 TICKETS SELLING FAST</span>
-          <span style={{ margin: '0 3rem' }}>💎 NEW EVENT ADDED: WEB3 MASTERCLASS</span>
-          <span style={{ margin: '0 3rem' }}>🚀 CLOUD SUMMIT 2026 NOW TRENDING</span>
+      {/* 💎 LIVE WORLD TICKER */}
+      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '1.8rem 0', background: 'var(--glass-bg)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '5rem 0' }}>
+        <div className="ticker-animation" style={{ display: 'inline-block', whiteSpace: 'nowrap', fontSize: '0.9rem', fontWeight: '900', color: 'var(--text-dim)', letterSpacing: '2px', opacity: 0.6 }}>
+          <span style={{ margin: '0 4rem' }}>● TECHNOVA 2026 REGISTRATIONS CLIMBING</span>
+          <span style={{ margin: '0 4rem' }}>● NEW CLOUD SUMMIT ASSETS DEPLOYED</span>
+          <span style={{ margin: '0 4rem' }}>● IIT MADRAS SHASTRATA NOW TRENDING</span>
+          <span style={{ margin: '0 4rem' }}>● WEB3 BOOTCAMP SLOTS: 2 REMAINING</span>
+          <span style={{ margin: '0 4rem' }}>● TECHNOVA 2026 REGISTRATIONS CLIMBING</span>
         </div>
       </div>
 
-      {/* Live Stats: Leaderboard */}
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <h2 className="gradient-text" style={{ fontSize: '2.5rem' }}>Pulse of the Fest.</h2>
-          <p style={{ color: 'var(--text-dim)', marginBottom: '3rem' }}>Live department-wise registration leaderboard.</p>
-          <div className="leaderboard-container" style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+      {/* 🏆 LEADERBOARD: Pulse of the Fest */}
+      <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+          <h2 className="gradient-text" style={{ fontSize: '3rem', fontWeight: '900' }}>Live Pulse.</h2>
+          <p style={{ color: 'var(--text-dim)', marginBottom: '4rem', opacity: 0.6 }}>Real-time department engagement leaderboard across all festivals.</p>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' }}>
             {stats.length > 0 ? stats.map(([dept, count], i) => (
-                <div key={dept} className="stat-card" style={{ flex: '1', maxWidth: '300px' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'}</div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{dept}</h3>
-                    <div style={{ fontSize: '2rem', fontWeight: '800' }}>{count}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Bookings Confirmed</div>
+                <div key={dept} className="glass-panel" style={{ flex: '1', maxWidth: '320px', padding: '3rem 2rem', borderTop: i === 0 ? '4px solid var(--primary)' : '1px solid var(--glass-border)' }}>
+                    <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>{i === 0 ? '🏆' : i === 1 ? '🥈' : '🥉'}</div>
+                    <h3 style={{ margin: '0 0 0.8rem 0', color: 'var(--text-main)', fontSize: '1.5rem', fontWeight: '900' }}>{dept}</h3>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '900', color: i === 0 ? 'var(--primary)' : 'inherit' }}>{count}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginTop: '0.5rem', fontWeight: 'bold' }}>Entries Authenticated</div>
                 </div>
             )) : (
-                <div style={{ color: 'var(--text-dim)', opacity: 0.5 }}>Syncing live analytics...</div>
+                <div style={{ padding: '5rem', opacity: 0.3, letterSpacing: '2px', fontWeight: 'bold' }}>
+                    {isLoading ? 'ESTABLISHING CLOUD SYNC...' : 'TICKET LEDGER IS CURRENTLY CLEAR.'}
+                </div>
             )}
           </div>
       </div>
 
-      {/* Features Grid */}
-      <h2 style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '2.5rem', marginTop: '4rem' }}>Engineered for Performance.</h2>
-      <div className="elite-grid">
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
-          <h3>Micro-Latency</h3>
-          <p style={{ color: 'var(--text-dim)' }}>Built on Java Microservices architecture for sub-second transaction times.</p>
+      {/* 🚀 ELITE FEATURES */}
+      <h2 style={{ textAlign: 'center', marginBottom: '4rem', fontSize: '3rem', fontWeight: '900', marginTop: '6rem' }}>Engineered for Impact.</h2>
+      <div className="elite-grid" style={{ paddingBottom: '8rem' }}>
+        <div className="glass-panel" style={{ padding: '2.5rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>⚡</div>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Zero-Lag UI</h3>
+          <p style={{ color: 'var(--text-dim)', lineHeight: '1.6' }}>Every interaction is optimized for micro-latency, providing a sub-second response across all dashboards.</p>
         </div>
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔔</div>
-          <h3>Instant Alerts</h3>
-          <p style={{ color: 'var(--text-dim)' }}>Real-time synchronization ensures you never miss a venue change or update.</p>
+        <div className="glass-panel" style={{ padding: '2.5rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>📢</div>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Instant Broadcasts</h3>
+          <p style={{ color: 'var(--text-dim)', lineHeight: '1.6' }}>Official management updates and venue changes are synchronized to your inbox the moment they're made.</p>
         </div>
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-          <h3>Secure Tickets</h3>
-          <p style={{ color: 'var(--text-dim)' }}>Unique attendee verification for all 10+ participants in a single booking.</p>
+        <div className="glass-panel" style={{ padding: '2.5rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>💎</div>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Elite Credentials</h3>
+          <p style={{ color: 'var(--text-dim)', lineHeight: '1.6' }}>Your tickets and participation certificates are verified via unique digital signatures and QR identifiers.</p>
         </div>
       </div>
 
       <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        .ticker-animation {
+            animation: tickerScroll 40s linear infinite;
+        }
+        @keyframes tickerScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .bounce-in { animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
         }
       `}</style>
     </div>
