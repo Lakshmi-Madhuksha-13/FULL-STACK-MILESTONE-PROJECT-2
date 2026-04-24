@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import TicketModal from '../components/TicketModal';
+import SockJS from 'sockjs-client';
+import { Stomp } from '@stomp/stompjs';
 
 /* ─── IN-APP MODAL ─────────────────────────────────────── */
 const Modal = ({ show, title, message, onConfirm, onCancel, confirmLabel = 'CONFIRM' }) => {
@@ -116,7 +118,27 @@ const UserDashboard = () => {
     } catch { }
   }, [user?.id]);
 
-  useEffect(() => { if (user) { fetchAll(); const i = setInterval(fetchAll, 7000); return () => clearInterval(i); } }, [fetchAll]);
+  useEffect(() => {
+    if (user) { 
+      fetchAll();
+      // Setup WebSocket
+      const socket = new SockJS('http://localhost:8081/ws-stomp'); // Connect to User Service directly
+      const stompClient = Stomp.over(socket);
+      stompClient.debug = () => {}; // Disable debug logs
+      stompClient.connect({}, (frame) => {
+        stompClient.subscribe(`/topic/notifications/${user.id}`, (msg) => {
+          if (msg.body) {
+            const newNotif = JSON.parse(msg.body);
+            setNotifications(prev => [newNotif, ...prev]);
+            showToast(`🔔 ${newNotif.message}`);
+          }
+        });
+      });
+
+      const i = setInterval(fetchAll, 7000); 
+      return () => { clearInterval(i); if (stompClient) stompClient.disconnect(); }; 
+    } 
+  }, [fetchAll]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -145,6 +167,40 @@ const UserDashboard = () => {
         setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status: 'CANCELLED' } : bk));
         showToast('Pass cancelled. Refund initiated.');
       } catch { showToast('Cancellation failed. Contact support.', false); }
+    });
+  };
+
+  const generateCertificate = (user, event) => {
+    import('jspdf').then(jspdf => {
+      const doc = new jspdf.jsPDF('landscape');
+      doc.setFillColor(11, 14, 23);
+      doc.rect(0, 0, 297, 210, 'F');
+      
+      doc.setDrawColor(139, 92, 246);
+      doc.setLineWidth(2);
+      doc.rect(10, 10, 277, 190);
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(36);
+      doc.text("CERTIFICATE OF PARTICIPATION", 148, 60, null, null, "center");
+      
+      doc.setFontSize(14);
+      doc.setTextColor(150, 150, 150);
+      doc.text("THIS PROUDLY CERTIFIES THAT", 148, 90, null, null, "center");
+      
+      doc.setFontSize(28);
+      doc.setTextColor(255, 255, 255);
+      doc.text(user.name.toUpperCase(), 148, 110, null, null, "center");
+      
+      doc.setFontSize(14);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Has successfully participated in the event:`, 148, 140, null, null, "center");
+      
+      doc.setFontSize(24);
+      doc.setTextColor(139, 92, 246);
+      doc.text(event.eventName, 148, 160, null, null, "center");
+      
+      doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
     });
   };
 
@@ -217,14 +273,23 @@ const UserDashboard = () => {
                         <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CONFIRMED'} /></div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                        <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
-                          style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(139,92,246,0.15)', border: '1px solid var(--primary)' }}>
-                          🎟 VIEW PASS
-                        </button>
-                        <button className="btn-elite" onClick={() => handleCancelBooking(b)}
-                          style={{ background: 'var(--accent)', border: 'none', fontSize: '0.75rem', padding: '0.6rem 1.4rem' }}>
-                          CANCEL
-                        </button>
+                        {ev?.dateTime && new Date(ev.dateTime) < new Date() ? (
+                          <button className="btn-elite" onClick={() => generateCertificate(user, ev)}
+                            style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: '#fbbf24', border: 'none', color: 'black' }}>
+                            🏆 CLAIM CERTIFICATE
+                          </button>
+                        ) : (
+                          <>
+                            <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
+                              style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(139,92,246,0.15)', border: '1px solid var(--primary)' }}>
+                              🎟 VIEW PASS
+                            </button>
+                            <button className="btn-elite" onClick={() => handleCancelBooking(b)}
+                              style={{ background: 'var(--accent)', border: 'none', fontSize: '0.75rem', padding: '0.6rem 1.4rem' }}>
+                              CANCEL
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

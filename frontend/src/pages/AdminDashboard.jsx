@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../services/api';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
+import { Line, Doughnut, Bar } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
 /* ─── MODAL ─────────────────────────────────────────────── */
 const Modal = ({ show, title, message, onConfirm, onCancel, confirmLabel = 'CONFIRM', danger = true }) => {
@@ -162,7 +166,32 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const TABS = [['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['support', 'Support Intel']];
+  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['support', 'Support Intel']];
+
+  // Chart Data Preparation
+  const revenueData = useMemo(() => {
+    const sortedBookings = [...bookings].filter(b => b?.status !== 'CANCELLED').sort((a,b) => a.id - b.id);
+    const labels = sortedBookings.map(b => `TF-${b.id}`);
+    const data = sortedBookings.map(b => b.totalAmount);
+    return {
+      labels,
+      datasets: [{ label: 'Revenue (₹)', data, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.2)', tension: 0.4 }]
+    };
+  }, [bookings]);
+
+  const departmentData = useMemo(() => {
+    const deptCounts = users.reduce((acc, u) => {
+      acc[u.department] = (acc[u.department] || 0) + 1;
+      return acc;
+    }, {});
+    return {
+      labels: Object.keys(deptCounts),
+      datasets: [{
+        data: Object.values(deptCounts),
+        backgroundColor: ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e']
+      }]
+    };
+  }, [users]);
 
   return (
     <div className="app-container page-transition" style={{ minHeight: '100vh' }}>
@@ -206,6 +235,23 @@ const AdminDashboard = () => {
       </div>
 
       <div className="glass-panel" style={{ minHeight: '600px', padding: '3.5rem' }}>
+
+        {/* ── ANALYTICS HUB ── */}
+        {activeTab === 'analytics' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Real-time Analytics Nerve Center</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '3rem' }}>
+              <div className="glass-panel" style={{ padding: '2rem', background: 'rgba(255,255,255,0.02)' }}>
+                <h3 style={{ marginBottom: '1.5rem', fontSize: '0.9rem', opacity: 0.5, letterSpacing: '1.5px' }}>REVENUE OVER TIME</h3>
+                <Line data={revenueData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }} />
+              </div>
+              <div className="glass-panel" style={{ padding: '2rem', background: 'rgba(255,255,255,0.02)' }}>
+                <h3 style={{ marginBottom: '1.5rem', fontSize: '0.9rem', opacity: 0.5, letterSpacing: '1.5px', textAlign: 'center' }}>DEPARTMENT TURNOUT</h3>
+                <Doughnut data={departmentData} options={{ responsive: true, plugins: { legend: { position: 'bottom', labels: { color: 'white' } } } }} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── EVENT HUB ── */}
         {activeTab === 'events' && (

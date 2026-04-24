@@ -26,6 +26,9 @@ const EventBookingPage = () => {
   const [event, setEvent] = useState(null);
   const [attendees, setAttendees] = useState([{ name: '', email: '' }]);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [allEvents, setAllEvents] = useState([]);
+  const [userBookings, setUserBookings] = useState([]);
   const [success, setSuccess] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -36,7 +39,27 @@ const EventBookingPage = () => {
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     api.event.get(`/${id}`).then(r => setEvent(r.data)).catch(() => setError('Event asset unreachable.'));
+    api.event.get('').then(r => setAllEvents(r.data)).catch(() => {});
+    api.booking.get(`/user/${user.id}`).then(r => setUserBookings(r.data)).catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    if (event && event.dateTime && allEvents.length > 0 && userBookings.length > 0) {
+      const currentEventDate = new Date(event.dateTime);
+      if (!isNaN(currentEventDate)) {
+        const clash = userBookings.find(b => b.status !== 'CANCELLED' && b.status !== 'REFUNDED' && b.eventId !== event.id && (() => {
+          const e = allEvents.find(ev => ev.id === b.eventId);
+          if (!e || !e.dateTime) return false;
+          const d = new Date(e.dateTime);
+          return !isNaN(d) && Math.abs(d - currentEventDate) < 2 * 60 * 60 * 1000; // 2 hours window
+        })());
+        if (clash) {
+          const clashEvent = allEvents.find(ev => ev.id === clash.eventId);
+          setWarning(`⚠️ Collision Detected: This event clashes with your existing booking for "${clashEvent?.eventName}".`);
+        }
+      }
+    }
+  }, [event, allEvents, userBookings]);
 
   const addAttendee = () => { if (attendees.length < (event?.availableTickets || 0)) setAttendees([...attendees, { name: '', email: '' }]); };
   const removeAttendee = i => { if (attendees.length > 1) setAttendees(attendees.filter((_, idx) => idx !== i)); };
@@ -61,6 +84,8 @@ const EventBookingPage = () => {
         attendeeDetails: JSON.stringify(attendees),
         status: 'CONFIRMED'
       });
+      // Give coins (Gamification)
+      try { await api.user.put(`/${user.id}/coins`, { coins: 50 * attendees.length }); } catch(e) {}
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 3000);
     } catch { setError('Booking failed after payment. Contact support immediately.'); }
@@ -101,6 +126,7 @@ const EventBookingPage = () => {
           </div>
 
           {error && <div style={{ padding: '1rem', marginBottom: '1.5rem', background: 'rgba(244,63,94,0.06)', borderLeft: '4px solid var(--accent)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--vivid-pink)' }}>{error}</div>}
+          {warning && <div style={{ padding: '1rem', marginBottom: '1.5rem', background: 'rgba(251,191,36,0.06)', borderLeft: '4px solid #fbbf24', borderRadius: '8px', fontSize: '0.85rem', color: '#fbbf24', fontWeight: 700 }}>{warning}</div>}
 
           <h3 style={{ marginBottom: '1.5rem', fontSize: '0.9rem', opacity: 0.5, letterSpacing: '1.5px' }}>ATTENDEE ROSTER</h3>
           {attendees.map((a, i) => (

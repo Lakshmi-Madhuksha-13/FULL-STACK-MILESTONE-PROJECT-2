@@ -61,6 +61,9 @@ const Navbar = () => {
                     
                     {user ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ padding: '0.4rem 0.8rem', background: 'rgba(251,191,36,0.15)', border: '1px solid #fbbf24', borderRadius: '2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fbbf24', fontWeight: 900, fontSize: '0.7rem' }}>
+                                🪙 {user.coins || 0} COINS
+                            </div>
                             <Link to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} style={{ ...navItem, background: 'rgba(139, 92, 246, 0.1)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
                                 {user.role === 'ADMIN' ? 'CONSOLE' : 'PORTAL'}
                             </Link>

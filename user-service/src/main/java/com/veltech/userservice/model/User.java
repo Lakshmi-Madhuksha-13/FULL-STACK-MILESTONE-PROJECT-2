@@ -16,6 +16,7 @@ public class User {
     private String role; // USER / ADMIN
     private String department;
     private String college;
+    private Integer coins;
 
     public User() {
     }
@@ -27,6 +28,7 @@ public class User {
         this.role = role;
         this.department = department;
         this.college = college;
+        this.coins = 100; // Welcome bonus
     }
 
     public Long getId() { return id; }
@@ -49,4 +51,7 @@ public class User {
 
     public String getCollege() { return college; }
     public void setCollege(String college) { this.college = college; }
+
+    public Integer getCoins() { return coins; }
+    public void setCoins(Integer coins) { this.coins = coins; }
 }

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
 const Register = () => {
@@ -25,6 +27,27 @@ const Register = () => {
             else navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data || 'Registry Conflict: Identifer already exists or system is offline.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setLoading(true);
+        try {
+            const decoded = jwtDecode(credentialResponse.credential);
+            const response = await api.user.post('/google-login', {
+                email: decoded.email,
+                name: decoded.name,
+            });
+            const user = response.data;
+            if (user && user.id) {
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                if (user.role === 'ADMIN') navigate('/admin');
+                else navigate('/dashboard');
+            }
+        } catch (err) {
+            setError('Google Authentication Failed.');
         } finally {
             setLoading(false);
         }
@@ -69,6 +92,16 @@ const Register = () => {
                         {loading ? 'INITIALIZING REGISTRY...' : 'CREATE IDENTITY'}
                     </button>
                 </form>
+
+                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setError('Google Authentication Failed')}
+                        useOneTap
+                        theme="filled_black"
+                        shape="pill"
+                    />
+                </div>
 
                 <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.9rem' }}>
                     <span style={{ color: 'var(--text-dim)' }}>Already in the System? </span>

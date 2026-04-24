@@ -5,6 +5,7 @@ import com.veltech.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -42,6 +43,30 @@ public class UserController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<?> googleLogin(@RequestBody java.util.Map<String, String> request) {
+        String email = request.get("email");
+        String name = request.get("name");
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isPresent()) {
+            return ResponseEntity.ok(userOptional.get());
+        } else {
+            User newUser = new User(name, email, "GOOGLE_AUTH", "USER", "Not Specified", "Not Specified");
+            if(newUser.getCoins() == null) newUser.setCoins(100);
+            return ResponseEntity.ok(userRepository.save(newUser));
+        }
+    }
+
+    @PutMapping("/{id}/coins")
+    public ResponseEntity<?> updateCoins(@PathVariable Long id, @RequestBody java.util.Map<String, Integer> request) {
+        return userRepository.findById(id).map(user -> {
+            Integer addedCoins = request.get("coins");
+            if (user.getCoins() == null) user.setCoins(100);
+            user.setCoins(user.getCoins() + addedCoins);
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
@@ -58,6 +83,9 @@ public class UserController {
     @Autowired
     private com.veltech.userservice.repository.NotificationRepository notificationRepository;
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     @GetMapping("/{userId}/notifications")
     public ResponseEntity<?> getNotifications(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationRepository.findByUserIdOrderByTimestampDesc(userId));
@@ -66,7 +94,9 @@ public class UserController {
     @PostMapping("/notifications")
     public ResponseEntity<?> createNotification(@RequestBody com.veltech.userservice.model.Notification notification) {
         notification.setRead(false);
-        return ResponseEntity.ok(notificationRepository.save(notification));
+        com.veltech.userservice.model.Notification saved = notificationRepository.save(notification);
+        messagingTemplate.convertAndSend("/topic/notifications/" + notification.getUserId(), saved);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/notifications/{id}/read")

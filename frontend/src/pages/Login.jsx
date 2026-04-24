@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
 const Login = () => {
@@ -35,6 +37,27 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+      const response = await api.user.post('/google-login', {
+        email: decoded.email,
+        name: decoded.name,
+      });
+      const user = response.data;
+      if (user && user.id) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        if (user.role === 'ADMIN') navigate('/admin');
+        else navigate('/events');
+      }
+    } catch (err) {
+      setError('Google Authentication Failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
       <div className="glass-panel" style={{ maxWidth: '450px', width: '100%', padding: '3rem' }}>
@@ -50,6 +73,16 @@ const Login = () => {
           <input type="password" placeholder="Security Key" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
           <button className="btn-primary" type="submit" disabled={loading} style={{ height: '55px' }}>{loading ? 'SYNCHRONIZING...' : 'AUTHORIZE SESSION'}</button>
         </form>
+
+        <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google Authentication Failed')}
+            useOneTap
+            theme="filled_black"
+            shape="pill"
+          />
+        </div>
 
         <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.9rem' }}>
           <span style={{ color: 'var(--text-dim)' }}>New here? </span>
