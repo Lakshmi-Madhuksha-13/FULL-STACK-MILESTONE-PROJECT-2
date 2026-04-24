@@ -95,4 +95,32 @@ public class BookingController {
             return ResponseEntity.ok("State Transitioned to CANCELLED");
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
     }
+
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<?> restoreBooking(@PathVariable Long id) {
+        return bookingRepository.findById(id).map(booking -> {
+            // Reclaim tickets
+            String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + booking.getTicketsBooked();
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    booking.setStatus("CONFIRMED");
+                    Booking saved = bookingRepository.save(booking);
+
+                    // Notify User
+                    String userServiceUrl = "http://user-service/api/users/notifications";
+                    java.util.Map<String, Object> notification = new java.util.HashMap<>();
+                    notification.put("userId", booking.getUserId());
+                    notification.put("message", "BOOKING_RESTORED: Your entry pass for Event #" + booking.getEventId() + " was successfully retrieved and confirmed.");
+                    try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
+
+                    return ResponseEntity.ok(saved);
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not enough availability to restore.");
+                }
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Service communication error.");
+            }
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
+    }
 }

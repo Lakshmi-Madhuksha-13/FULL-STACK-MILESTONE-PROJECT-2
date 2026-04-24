@@ -163,11 +163,20 @@ const UserDashboard = () => {
       closeModal();
       try {
         await api.booking.delete(`/${b.id}`);
-        // Optimistic UI update — immediately mark as CANCELLED
         setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status: 'CANCELLED' } : bk));
         showToast('Pass cancelled. Refund initiated.');
       } catch { showToast('Cancellation failed. Contact support.', false); }
     });
+  };
+
+  const handleRestoreBooking = async (b) => {
+    try {
+      await api.booking.put(`/${b.id}/restore`);
+      setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status: 'CONFIRMED' } : bk));
+      showToast('Pass successfully restored!');
+    } catch {
+      showToast('Failed to restore pass. Event may be full.', false);
+    }
   };
 
   const generateCertificate = (user, event) => {
@@ -340,6 +349,12 @@ const UserDashboard = () => {
                             style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>
                             🎟 VIEW VOIDED PASS
                           </button>
+                          {b.status === 'CANCELLED' && (
+                            <button className="btn-elite" onClick={() => handleRestoreBooking(b)}
+                              style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: '#10b981', color: 'white', border: 'none' }}>
+                              ↺ RESTORE PASS
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div style={{ marginTop: '1.5rem', padding: '1rem 1.2rem', background: b.status === 'REFUNDED' ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', border: b.status === 'REFUNDED' ? '1px dashed rgba(251,191,36,0.3)' : '1px dashed var(--glass-border)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
