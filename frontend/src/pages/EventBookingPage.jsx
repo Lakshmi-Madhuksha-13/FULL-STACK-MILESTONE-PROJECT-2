@@ -85,7 +85,10 @@ const EventBookingPage = () => {
         status: 'CONFIRMED'
       });
       // Give coins (Gamification)
-      try { await api.user.put(`/${user.id}/coins`, { coins: 50 * attendees.length }); } catch(e) {}
+      try { 
+        const cRes = await api.user.put(`/${user.id}/coins`, { coins: 50 * attendees.length }); 
+        if(cRes && cRes.data && cRes.data.id) localStorage.setItem('currentUser', JSON.stringify(cRes.data));
+      } catch(e) {}
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 3000);
     } catch { setError('Booking failed after payment. Contact support immediately.'); }
