@@ -8,7 +8,7 @@ const TicketModal = ({ booking, event, user, onClose }) => {
   if (!booking || !event) return null;
 
   // Encode full ticket data into the QR — scannable and verifiable
-  const qrData = `http://localhost:5173/admin?verify=TF-${booking.id}`;
+  const qrData = `http://192.168.29.17:5173/admin?verify=TF-${booking.id}`;
 
   const handleDownloadPDF = async () => {
     const canvas = await html2canvas(ticketRef.current, {

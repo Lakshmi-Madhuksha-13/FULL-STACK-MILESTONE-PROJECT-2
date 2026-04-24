@@ -4,11 +4,11 @@ import axios from 'axios';
 const isProduction = false; 
 
 const LOCAL_URLS = {
-    USER_SERVICE: "http://localhost:8081/api/users",
-    EVENT_SERVICE: "http://localhost:8082/api/events",
-    BOOKING_SERVICE: "http://localhost:8083/api/bookings",
-    COUPON_SERVICE: "http://localhost:8083/api/coupons",
-    SUPPORT_SERVICE: "http://localhost:8081/api/support"
+    USER_SERVICE: "http://192.168.29.17:8081/api/users",
+    EVENT_SERVICE: "http://192.168.29.17:8082/api/events",
+    BOOKING_SERVICE: "http://192.168.29.17:8083/api/bookings",
+    COUPON_SERVICE: "http://192.168.29.17:8083/api/coupons",
+    SUPPORT_SERVICE: "http://192.168.29.17:8081/api/support"
 };
 
 const CLOUD_URLS = {
