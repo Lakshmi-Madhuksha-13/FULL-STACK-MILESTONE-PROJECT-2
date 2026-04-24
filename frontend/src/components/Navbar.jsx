@@ -58,6 +58,7 @@ const Navbar = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
                     <Link to="/" style={navItem}>HOME</Link>
                     <Link to="/events" style={navItem}>BROWSE</Link>
+                    <Link to="/leaderboard" style={navItem}>LEADERBOARD</Link>
                     
                     {user ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

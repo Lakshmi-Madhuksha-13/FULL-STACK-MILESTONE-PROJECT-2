@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Profile from './pages/Profile';
 import EventBookingPage from './pages/EventBookingPage';
+import Leaderboard from './pages/Leaderboard';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/book/:id" element={<EventBookingPage />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
       <ChatSupport />
     </Router>

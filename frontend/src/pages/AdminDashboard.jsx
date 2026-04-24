@@ -46,7 +46,7 @@ const AdminDashboard = () => {
   const [toast, setToast] = useState({ show: false, message: '' });
   const [modal, setModal] = useState({ show: false });
   const [editingEvent, setEditingEvent] = useState(null);
-  const [newEvent, setNewEvent] = useState({ eventName: '', venue: '', department: '', dateTime: '', price: 0, totalTickets: 100, availableTickets: 100 });
+  const [newEvent, setNewEvent] = useState({ eventName: '', venue: '', department: '', dateTime: '', price: 0, totalTickets: 100, availableTickets: 100, poster: '' });
   const [verifyId, setVerifyId] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
 
@@ -192,7 +192,14 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
+  const handleGenerateAIPoster = () => {
+    const keywords = (newEvent.eventName || 'Technology').split(' ')[0];
+    const mockPoster = `https://source.unsplash.com/featured/?${keywords},futuristic,tech`;
+    setNewEvent({ ...newEvent, poster: mockPoster });
+    showToast('AI Poster Assets Synchronized');
+  };
+
+  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Control'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
 
   // Chart Data Preparation
   const revenueData = useMemo(() => {
@@ -304,8 +311,17 @@ const AdminDashboard = () => {
                   <input type="number" className="form-control" value={newEvent.price || ''} onChange={e => setNewEvent({ ...newEvent, price: parseFloat(e.target.value) })} placeholder="Entry Fee (₹)" />
                   <input type="datetime-local" className="form-control" value={newEvent.dateTime} onChange={e => setNewEvent({ ...newEvent, dateTime: e.target.value })} />
                   <input type="number" className="form-control" value={newEvent.totalTickets} onChange={e => setNewEvent({ ...newEvent, totalTickets: parseInt(e.target.value) })} placeholder="Total Slots" />
-                  <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2' }}>INITIATE DEPLOYMENT ➔</button>
+                  <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                    <button type="button" className="btn-elite" onClick={handleGenerateAIPoster} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', fontSize: '0.7rem' }}>✨ GENERATE AI POSTER</button>
+                    <button type="submit" className="btn-primary" style={{ flex: 2 }}>INITIATE DEPLOYMENT ➔</button>
+                  </div>
                 </form>
+                {newEvent.poster && (
+                  <div className="bounce-in" style={{ marginTop: '2rem', textAlign: 'center' }}>
+                    <img src={newEvent.poster} alt="AI Poster" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '15px', border: '1px solid var(--primary-bright)' }} />
+                    <p style={{ fontSize: '0.65rem', opacity: 0.5, marginTop: '0.6rem', fontWeight: 900, letterSpacing: '2px' }}>AI GENERATED ASSET READY</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -326,24 +342,36 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ── MEMBER REGISTRY ── */}
+        {/* ── MEMBER CONTROL ── */}
         {activeTab === 'users' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Identity Registry</h2>
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Member Control Registry</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Manage user roles, rewards, and system access.</p>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.7rem', opacity: 0.5 }}>
-                  <tr>{['ID', 'NAME', 'EMAIL', 'ROLE', 'ACTION'].map(h => <th key={h} style={{ padding: '1rem' }}>{h}</th>)}</tr>
+                  <tr>{['NAME', 'EMAIL', 'DEPT', 'COINS', 'ROLE', 'ACTION'].map(h => <th key={h} style={{ padding: '1rem' }}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                      <td style={{ padding: '1.5rem 1rem', fontWeight: 900, opacity: 0.5 }}>USR-{u.id}</td>
                       <td style={{ padding: '1.5rem 1rem', fontWeight: 700 }}>{u.name}</td>
-                      <td style={{ padding: '1.5rem 1rem', opacity: 0.6, fontSize: '0.85rem' }}>{u.email}</td>
-                      <td style={{ padding: '1.5rem 1rem' }}><span style={{ background: u.role === 'ADMIN' ? 'rgba(139,92,246,0.15)' : 'rgba(16,185,129,0.1)', color: u.role === 'ADMIN' ? 'var(--primary)' : 'var(--success)', border: `1px solid ${u.role === 'ADMIN' ? 'var(--primary)' : 'var(--success)'}`, padding: '0.2rem 0.8rem', borderRadius: '2rem', fontSize: '0.65rem', fontWeight: 900 }}>{u.role}</span></td>
+                      <td style={{ padding: '1.5rem 1rem', opacity: 0.6 }}>{u.email}</td>
+                      <td style={{ padding: '1.5rem 1rem', fontSize: '0.75rem' }}>{u.department}</td>
+                      <td style={{ padding: '1.5rem 1rem', color: '#fbbf24', fontWeight: 900 }}>🪙 {u.coins || 0}</td>
                       <td style={{ padding: '1.5rem 1rem' }}>
-                        {u.role !== 'ADMIN' && <button className="btn-elite" onClick={() => handlePurgeUser(u)} style={{ background: 'var(--accent)', border: 'none', fontSize: '0.7rem', padding: '0.5rem 1.2rem' }}>PURGE</button>}
+                         <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.6rem', borderRadius: '4px', background: u.role === 'ADMIN' ? 'var(--vivid-pink)' : 'var(--primary)' }}>{u.role}</span>
+                      </td>
+                      <td style={{ padding: '1.5rem 1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn-elite" onClick={() => {
+                            const newCoins = prompt(`Set new coin balance for ${u.name}:`, u.coins);
+                            if (newCoins !== null) {
+                               api.user.put(`/${u.id}/coins`, { coins: parseInt(newCoins) - (u.coins || 0) }).then(() => fetchAll());
+                            }
+                          }} style={{ fontSize: '0.65rem', padding: '0.4rem 0.8rem' }}>EDIT COINS</button>
+                          {u.role !== 'ADMIN' && <button className="btn-elite" onClick={() => handlePurgeUser(u)} style={{ background: 'var(--accent)', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.8rem' }}>PURGE</button>}
+                        </div>
                       </td>
                     </tr>
                   ))}

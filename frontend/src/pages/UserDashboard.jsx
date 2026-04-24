@@ -180,6 +180,19 @@ const UserDashboard = () => {
     }
   };
 
+  const [reviewForm, setReviewForm] = useState({ bookingId: null, rating: 5, review: '' });
+
+  const handleAddReview = async () => {
+    try {
+      await api.booking.put(`/${reviewForm.bookingId}/review`, { rating: reviewForm.rating, review: reviewForm.review });
+      setBookings(prev => prev.map(b => b.id === reviewForm.bookingId ? { ...b, rating: reviewForm.rating, review: reviewForm.review } : b));
+      setReviewForm({ bookingId: null, rating: 5, review: '' });
+      showToast('Thank you for your feedback!');
+    } catch {
+      showToast('Failed to submit review.', false);
+    }
+  };
+
   const generateCertificate = (user, event) => {
     import('jspdf').then(jspdf => {
       const doc = new jspdf.jsPDF('landscape');
@@ -395,9 +408,29 @@ const UserDashboard = () => {
                       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
                       <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.5rem' }}>{ev.eventName}</div>
                       <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '1.5rem' }}>Conducted on: {new Date(ev.dateTime).toLocaleDateString()}</div>
-                      <button className="btn-primary" onClick={() => generateCertificate(user, ev)} style={{ width: '100%', background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#000' }}>
-                        ⬇ DOWNLOAD CERTIFICATE
-                      </button>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                        <button className="btn-primary" onClick={() => generateCertificate(user, ev)} style={{ flex: 1, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#000', fontSize: '0.7rem', padding: '0.6rem' }}>
+                          ⬇ CERTIFICATE
+                        </button>
+                        {!b.rating ? (
+                          <button className="btn-elite" onClick={() => setReviewForm({ ...reviewForm, bookingId: b.id })} style={{ flex: 1, fontSize: '0.7rem', padding: '0.6rem' }}>
+                            ⭐ RATE EVENT
+                          </button>
+                        ) : (
+                          <div style={{ flex: 1, fontSize: '0.75rem', color: '#fbbf24', fontWeight: 900 }}>⭐ {b.rating}/5</div>
+                        )}
+                      </div>
+
+                      {reviewForm.bookingId === b.id && (
+                        <div className="page-transition" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.8rem' }}>
+                            {[1,2,3,4,5].map(s => <span key={s} onClick={() => setReviewForm({...reviewForm, rating: s})} style={{ cursor: 'pointer', fontSize: '1.2rem', filter: reviewForm.rating >= s ? 'none' : 'grayscale(1)' }}>⭐</span>)}
+                          </div>
+                          <textarea placeholder="Write a quick review..." className="form-control" style={{ fontSize: '0.75rem', height: '60px', marginBottom: '0.8rem' }} value={reviewForm.review} onChange={e => setReviewForm({...reviewForm, review: e.target.value})} />
+                          <button className="btn-primary" onClick={handleAddReview} style={{ width: '100%', fontSize: '0.7rem', padding: '0.5rem' }}>SUBMIT</button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

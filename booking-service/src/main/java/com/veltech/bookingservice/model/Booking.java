@@ -18,7 +18,10 @@ public class Booking {
     private String attendeeDetails; 
     
     // 🏦 FINANCIAL STATUS FIELD
-    private String status = "CONFIRMED"; // CONFIRMED, CANCELLED, REFUNDED
+    private String status = "CONFIRMED"; // CONFIRMED, CANCELLED, REFUNDED, ADMITTED
+    
+    private Integer rating;
+    private String review;
 
     public Booking() {
     }
@@ -51,4 +54,10 @@ public class Booking {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Integer getRating() { return rating; }
+    public void setRating(Integer rating) { this.rating = rating; }
+
+    public String getReview() { return review; }
+    public void setReview(String review) { this.review = review; }
 }

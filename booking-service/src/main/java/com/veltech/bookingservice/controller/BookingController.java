@@ -148,4 +148,13 @@ public class BookingController {
             }
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
     }
+
+    @PutMapping("/{id}/review")
+    public ResponseEntity<?> addReview(@PathVariable Long id, @RequestBody java.util.Map<String, Object> request) {
+        return bookingRepository.findById(id).map(booking -> {
+            booking.setRating((Integer) request.get("rating"));
+            booking.setReview((String) request.get("review"));
+            return ResponseEntity.ok(bookingRepository.save(booking));
+        }).orElse(ResponseEntity.notFound().build());
+    }
 }
