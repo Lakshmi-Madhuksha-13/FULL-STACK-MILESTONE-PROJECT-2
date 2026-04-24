@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatSupport from './components/ChatSupport';
+import LiveNotificationBar from './components/LiveNotificationBar';
 import Home from './pages/Home';
 import EventsPage from './pages/EventsPage';
 import UserDashboard from './pages/UserDashboard';
@@ -16,6 +17,7 @@ function App() {
   return (
     <Router>
       <Navbar />
+      <LiveNotificationBar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/events" element={<EventsPage />} />

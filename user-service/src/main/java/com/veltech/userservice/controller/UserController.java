@@ -104,6 +104,13 @@ public class UserController {
         return ResponseEntity.ok(saved);
     }
 
+    @PostMapping("/notifications/global")
+    public ResponseEntity<?> createGlobalNotification(@RequestBody java.util.Map<String, String> request) {
+        String message = request.get("message");
+        messagingTemplate.convertAndSend("/topic/global", request);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping("/notifications/{id}/read")
     public ResponseEntity<?> markAsRead(@PathVariable Long id) {
         notificationRepository.findById(id).ifPresent(n -> {

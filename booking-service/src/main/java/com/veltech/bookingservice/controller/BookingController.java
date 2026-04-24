@@ -29,8 +29,21 @@ public class BookingController {
             ResponseEntity<String> response = restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
             if (response.getStatusCode() == HttpStatus.OK) {
                 booking.setStatus("CONFIRMED");
-                Booking savedBooking = bookingRepository.save(booking);
-                return ResponseEntity.ok(savedBooking);
+                Booking saved = bookingRepository.save(booking);
+
+                // Notify User
+                String userServiceUrl = "http://user-service/api/users/notifications";
+                java.util.Map<String, Object> notification = new java.util.HashMap<>();
+                notification.put("userId", saved.getUserId());
+                notification.put("message", "BOOKING_CONFIRMED: Your entry pass for Event #" + saved.getEventId() + " is ready.");
+                try { restTemplate.postForEntity(userServiceUrl, notification, Object.class); } catch (Exception ignored) {}
+
+                // Global Notification
+                java.util.Map<String, String> global = new java.util.HashMap<>();
+                global.put("message", "NEW BOOKING: Ticket TF-" + saved.getId() + " issued for Event #" + saved.getEventId());
+                try { restTemplate.postForEntity(userServiceUrl + "/global", global, Object.class); } catch (Exception ignored) {}
+
+                return ResponseEntity.ok(saved);
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not enough availability.");
             }
@@ -61,15 +74,20 @@ public class BookingController {
             java.util.Map<String, Object> notification = new java.util.HashMap<>();
             notification.put("userId", booking.getUserId());
             if (newStatus.equals("CANCELLED")) {
-                notification.put("message", "BOOKING_CANCELLED: Your entry pass for Event #" + booking.getEventId() + " was cancelled by the ADMIN. Refund is PROCESSING.");
+                notification.put("message", "BOOKING_CANCELLED: Your entry pass for Event #" + booking.getEventId() + " was cancelled by the ADMIN.");
             } else if (newStatus.equals("REFUNDED")) {
-                notification.put("message", "REFUND_PROCESSED: Your refund for Event #" + booking.getEventId() + " has been fully processed by the ADMIN.");
+                notification.put("message", "REFUND_PROCESSED: Your refund for Event #" + booking.getEventId() + " has been processed.");
             } else if (newStatus.equals("ADMITTED")) {
-                notification.put("message", "ACCESS_GRANTED: Your entry pass for Event #" + booking.getEventId() + " has been scanned and verified. Welcome to the event!");
+                notification.put("message", "ACCESS_GRANTED: Your entry pass for Event #" + booking.getEventId() + " verified. Welcome!");
             } else {
-                notification.put("message", "STATUS_UPDATE: Your booking for Event #" + booking.getEventId() + " status changed to " + newStatus);
+                notification.put("message", "STATUS_UPDATE: Your booking status changed to " + newStatus);
             }
-            try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
+            try { restTemplate.postForEntity(userServiceUrl, notification, Object.class); } catch (Exception ignored) {}
+
+            // Global Notification
+            java.util.Map<String, String> global = new java.util.HashMap<>();
+            global.put("message", "PASS VERIFIED: Ticket TF-" + saved.getId() + " is now " + newStatus);
+            try { restTemplate.postForEntity(userServiceUrl + "/global", global, Object.class); } catch (Exception ignored) {}
 
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
@@ -79,20 +97,22 @@ public class BookingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
         return bookingRepository.findById(id).map(booking -> {
-            // Restore tickets
             String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + (-booking.getTicketsBooked());
-            try { restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class); } catch(Exception e) {}
+            try { restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class); } catch(Exception ignored) {}
             
-            // ARCHIVE AS CANCELLED INSTEAD OF DELETE
             booking.setStatus("CANCELLED");
-            bookingRepository.save(booking);
+            Booking saved = bookingRepository.save(booking);
             
-            // Notify User
             String userServiceUrl = "http://user-service/api/users/notifications";
             java.util.Map<String, Object> notification = new java.util.HashMap<>();
             notification.put("userId", booking.getUserId());
-            notification.put("message", "BOOKING_CANCELLED: Your entry pass for Event #" + booking.getEventId() + " was cancelled by YOU (USER). Refund is PROCESSING.");
-            try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
+            notification.put("message", "BOOKING_CANCELLED: You cancelled your entry pass for Event #" + booking.getEventId());
+            try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception ignored) {}
+
+            // Global Notification
+            java.util.Map<String, String> global = new java.util.HashMap<>();
+            global.put("message", "CANCELLATION: Ticket TF-" + saved.getId() + " was cancelled by the User.");
+            try { restTemplate.postForEntity(userServiceUrl + "/global", global, Object.class); } catch (Exception ignored) {}
 
             return ResponseEntity.ok("State Transitioned to CANCELLED");
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found"));
@@ -101,7 +121,6 @@ public class BookingController {
     @PutMapping("/{id}/restore")
     public ResponseEntity<?> restoreBooking(@PathVariable Long id) {
         return bookingRepository.findById(id).map(booking -> {
-            // Reclaim tickets
             String eventServiceUrl = "http://event-service/api/events/" + booking.getEventId() + "/tickets?count=" + booking.getTicketsBooked();
             try {
                 ResponseEntity<String> response = restTemplate.exchange(eventServiceUrl, org.springframework.http.HttpMethod.PUT, null, String.class);
@@ -109,12 +128,16 @@ public class BookingController {
                     booking.setStatus("CONFIRMED");
                     Booking saved = bookingRepository.save(booking);
 
-                    // Notify User
                     String userServiceUrl = "http://user-service/api/users/notifications";
                     java.util.Map<String, Object> notification = new java.util.HashMap<>();
                     notification.put("userId", booking.getUserId());
-                    notification.put("message", "BOOKING_RESTORED: Your entry pass for Event #" + booking.getEventId() + " was successfully retrieved and confirmed.");
-                    try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception e) {}
+                    notification.put("message", "BOOKING_RESTORED: Your entry pass for Event #" + booking.getEventId() + " was successfully restored.");
+                    try { restTemplate.postForObject(userServiceUrl, notification, Object.class); } catch(Exception ignored) {}
+
+                    // Global Notification
+                    java.util.Map<String, String> global = new java.util.HashMap<>();
+                    global.put("message", "RESTORED: Ticket TF-" + saved.getId() + " has been reclaimed by the User.");
+                    try { restTemplate.postForEntity(userServiceUrl + "/global", global, Object.class); } catch (Exception ignored) {}
 
                     return ResponseEntity.ok(saved);
                 } else {
