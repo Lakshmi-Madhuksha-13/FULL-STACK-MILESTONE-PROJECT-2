@@ -199,8 +199,32 @@ const UserDashboard = () => {
       doc.setFontSize(24);
       doc.setTextColor(139, 92, 246);
       doc.text(event.eventName, 148, 160, null, null, "center");
+
+      // Generate QR Code with Verifiable Data
+      const qrData = JSON.stringify({
+        name: user.name,
+        email: user.email,
+        event: event.eventName,
+        issued: new Date().toISOString().split('T')[0]
+      });
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
       
-      doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => {
+        doc.addImage(img, 'PNG', 230, 150, 40, 40);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("SCAN TO VERIFY", 250, 195, null, null, "center");
+
+        doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
+      };
+      img.onerror = () => {
+        // Fallback if QR fails to load
+        doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
+      };
+      img.src = qrUrl;
     });
   };
 
