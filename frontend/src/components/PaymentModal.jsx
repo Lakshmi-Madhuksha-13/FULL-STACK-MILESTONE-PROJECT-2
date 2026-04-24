@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const PaymentModal = ({ amount, eventName, onSuccess, onCancel }) => {
   const [method, setMethod] = useState('card'); // 'card' | 'upi' | 'netbanking'
@@ -31,7 +32,7 @@ const PaymentModal = ({ amount, eventName, onSuccess, onCancel }) => {
       if (card.cvv.length < 3) return 'Enter a valid CVV.';
     }
     if (method === 'upi') {
-      if (!upi.includes('@')) return 'Enter a valid UPI ID (e.g. name@upi).';
+      if (upi.length > 0 && !upi.includes('@')) return 'Enter a valid UPI ID (e.g. name@upi).';
     }
     return null;
   };
@@ -139,14 +140,20 @@ const PaymentModal = ({ amount, eventName, onSuccess, onCancel }) => {
 
         {/* ── UPI FORM ── */}
         {method === 'upi' && (
-          <div>
-            <label style={lbl}>UPI ID</label>
-            <input className="form-control" placeholder="yourname@upi or @okaxis or @ybl"
-              value={upi} onChange={e => setUpi(e.target.value)} />
-            <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem', flexWrap: 'wrap' }}>
-              {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
-                <div key={app} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>{app}</div>
-              ))}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <QRCodeSVG value={`upi://pay?pa=techfest@ybl&pn=TechFest&am=${amount}&cu=INR`} size={140} level="H" />
+            </div>
+            <div style={{ width: '100%', textAlign: 'center', marginBottom: '1rem', opacity: 0.5, fontSize: '0.8rem', fontWeight: 900 }}>OR ENTER UPI ID</div>
+            <div style={{ width: '100%' }}>
+              <label style={lbl}>UPI ID</label>
+              <input className="form-control" placeholder="yourname@upi or @okaxis or @ybl"
+                value={upi} onChange={e => setUpi(e.target.value)} />
+              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
+                  <div key={app} onClick={() => setUpi(`user@${app.toLowerCase()}`)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: '0.2s' }}>{app}</div>
+                ))}
+              </div>
             </div>
           </div>
         )}
