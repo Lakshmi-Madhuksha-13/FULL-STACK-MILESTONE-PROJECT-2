@@ -40,6 +40,7 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
   const [modal, setModal] = useState({ show: false });
@@ -62,10 +63,11 @@ const AdminDashboard = () => {
 
   const fetchAll = async () => {
     try {
-      const [eRes, uRes, bRes] = await Promise.all([api.event.get(''), api.user.get(''), api.booking.get('')]);
+      const [eRes, uRes, bRes, nRes] = await Promise.all([api.event.get(''), api.user.get(''), api.booking.get(''), api.user.get('/notifications/all').catch(() => ({ data: [] }))]);
       setEvents(Array.isArray(eRes.data) ? eRes.data : []);
       setUsers(Array.isArray(uRes.data) ? uRes.data : []);
       setBookings(Array.isArray(bRes.data) ? bRes.data : []);
+      setNotifications(Array.isArray(nRes.data) ? nRes.data : []);
       setIsLoaded(true);
     } catch (e) {}
   };
@@ -166,7 +168,7 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['support', 'Support Intel']];
+  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
 
   // Chart Data Preparation
   const revenueData = useMemo(() => {
@@ -360,6 +362,35 @@ const AdminDashboard = () => {
               </table>
               {isLoaded && !bookings.length && <p style={{ opacity: 0.3, textAlign: 'center', padding: '4rem' }}>No bookings in ledger.</p>}
             </div>
+          </div>
+        )}
+
+        {/* ── GLOBAL ACTIVITY LOGS ── */}
+        {activeTab === 'activity' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Global Activity & Notifications</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>A complete audit trail of user actions across the platform.</p>
+            {notifications.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {notifications.map(n => {
+                  const targetUser = users.find(u => u.id === n.userId);
+                  return (
+                    <div key={n.id} className="glass-panel" style={{ padding: '1.5rem 2rem', background: 'rgba(255,255,255,0.02)', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                      <div style={{ fontSize: '2rem' }}>{n.message.includes('CANCELLED') ? '🚫' : n.message.includes('REFUND') ? '💰' : '🔔'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{n.message}</div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.4rem', display: 'flex', gap: '1rem' }}>
+                          <span>{new Date(n.timestamp).toLocaleString()}</span>
+                          <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Target: {targetUser ? targetUser.name : `User #${n.userId}`}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No activity logs found in the system.</div>
+            )}
           </div>
         )}
 

@@ -91,6 +91,11 @@ public class UserController {
         return ResponseEntity.ok(notificationRepository.findByUserIdOrderByTimestampDesc(userId));
     }
 
+    @GetMapping("/notifications/all")
+    public ResponseEntity<?> getAllNotifications() {
+        return ResponseEntity.ok(notificationRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp")));
+    }
+
     @PostMapping("/notifications")
     public ResponseEntity<?> createNotification(@RequestBody com.veltech.userservice.model.Notification notification) {
         notification.setRead(false);

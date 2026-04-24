@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -165,13 +164,11 @@ const TicketModal = ({ booking, event, user, onClose }) => {
             borderRadius: '16px', border: '2px solid #e2e8f0',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}>
-            <QRCodeCanvas
-              value={qrData}
-              size={140}
-              level="H"
-              includeMargin={false}
-              fgColor={isCancelled ? '#94a3b8' : '#1e1b4b'}
-              bgColor="#ffffff"
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrData)}${isCancelled ? '&color=94a3b8' : '&color=1e1b4b'}&bgcolor=ffffff`}
+              alt="Verification QR Code"
+              style={{ width: '140px', height: '140px', display: 'block' }}
+              crossOrigin="anonymous"
             />
           </div>
           <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.8rem', fontFamily: 'monospace', letterSpacing: '1px' }}>
