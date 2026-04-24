@@ -85,6 +85,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'ADMIN') return;
     fetchAll();
+    fetchCoupons();
     const i = setInterval(fetchAll, 8000);
     return () => clearInterval(i);
   }, []);
@@ -199,7 +200,48 @@ const AdminDashboard = () => {
     showToast('AI Poster Assets Synchronized');
   };
 
-  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Control'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
+  const [coupons, setCoupons] = useState([]);
+  const [newCoupon, setNewCoupon] = useState({ code: '', discountPercent: 10 });
+
+  const fetchCoupons = async () => {
+    const res = await api.coupon.get('');
+    setCoupons(Array.isArray(res.data) ? res.data : []);
+  };
+
+  const handleCreateCoupon = async () => {
+    if (!newCoupon.code) return;
+    await api.coupon.post('', newCoupon);
+    setNewCoupon({ code: '', discountPercent: 10 });
+    fetchCoupons();
+    showToast('Promo Code Activated!');
+  };
+
+  const handleDeleteCoupon = async (id) => {
+    await api.coupon.delete(`/${id}`);
+    fetchCoupons();
+    showToast('Promo Code Deactivated.');
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['TF-ID', 'Event', 'User', 'Tickets', 'Amount', 'Status'];
+    const rows = bookings.map(b => [
+      `TF-${b.id}`,
+      events.find(e => e.id === b.eventId)?.eventName || b.eventId,
+      users.find(u => u.id === b.userId)?.name || b.userId,
+      b.ticketsBooked,
+      b.totalAmount,
+      b.status
+    ]);
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TechFest_Audit_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Control'], ['coupons', 'Promo Codes'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
 
   // Chart Data Preparation
   const revenueData = useMemo(() => {
@@ -384,8 +426,13 @@ const AdminDashboard = () => {
         {/* ── BOOKING AUDIT ── */}
         {activeTab === 'audit' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Booking Audit & Ledger</h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Track and manage all issued entry passes.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+              <div>
+                <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Booking Audit & Ledger</h2>
+                <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Track and manage all issued entry passes.</p>
+              </div>
+              <button className="btn-elite" onClick={handleExportCSV} style={{ background: 'var(--success)', border: 'none', color: 'white', fontWeight: 900 }}>⬇ EXPORT CSV REPORT</button>
+            </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '3rem' }}>
               <div className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--accent)' }}>
@@ -434,6 +481,33 @@ const AdminDashboard = () => {
                 </tbody>
               </table>
               {isLoaded && !bookings.length && <p style={{ opacity: 0.3, textAlign: 'center', padding: '4rem' }}>No bookings in ledger.</p>}
+            </div>
+          </div>
+        )}
+
+        {/* ── PROMO CODES ── */}
+        {activeTab === 'coupons' && (
+          <div className="page-transition" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Promo Code Architect</h2>
+            
+            <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '4rem', border: '1px solid var(--glass-border)' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem' }}>Deploy New Coupon</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 150px', gap: '1rem' }}>
+                <input type="text" placeholder="CODE (e.g. VELTECH20)" className="form-control" value={newCoupon.code} onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} />
+                <input type="number" placeholder="Discount %" className="form-control" value={newCoupon.discountPercent} onChange={e => setNewCoupon({...newCoupon, discountPercent: parseFloat(e.target.value)})} />
+                <button className="btn-primary" onClick={handleCreateCoupon}>ACTIVATE</button>
+              </div>
+            </div>
+
+            <h4 style={{ opacity: 0.4, letterSpacing: '2px', marginBottom: '1.5rem' }}>ACTIVE CAMPAIGNS ({coupons.length})</h4>
+            <div className="elite-grid">
+              {coupons.map(c => (
+                <div key={c.id} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 950, color: 'var(--primary)', marginBottom: '0.5rem' }}>{c.code}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '1.5rem' }}>{c.discountPercent}% OFF</div>
+                  <button className="btn-elite" onClick={() => handleDeleteCoupon(c.id)} style={{ background: 'var(--accent)', border: 'none', width: '100%', fontSize: '0.7rem' }}>DEACTIVATE</button>
+                </div>
+              ))}
             </div>
           </div>
         )}

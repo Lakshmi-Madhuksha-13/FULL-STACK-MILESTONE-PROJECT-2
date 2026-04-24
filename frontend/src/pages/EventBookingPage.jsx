@@ -35,6 +35,11 @@ const EventBookingPage = () => {
   const [loading, setLoading] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState(null);
 
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+
   const user = (() => { try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s) : null; } catch { return null; } })();
 
   useEffect(() => {
@@ -42,6 +47,7 @@ const EventBookingPage = () => {
     api.event.get(`/${id}`).then(r => setEvent(r.data)).catch(() => setError('Event asset unreachable.'));
     api.event.get('').then(r => setAllEvents(r.data)).catch(() => {});
     api.booking.get(`/user/${user.id}`).then(r => setUserBookings(r.data)).catch(() => {});
+    api.coupon.get('').then(r => setAvailableCoupons(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -72,6 +78,23 @@ const EventBookingPage = () => {
     setError(''); return true;
   };
 
+  const handleApplyCoupon = async () => {
+    if (!promoCode.trim()) return;
+    try {
+      const res = await api.coupon.get(`/validate/${promoCode.toUpperCase()}`);
+      if (res.data) {
+        setAppliedCoupon(res.data);
+        const disc = (event.price * attendees.length) * (res.data.discountPercent / 100);
+        setDiscountAmount(disc);
+        setError('');
+      } else {
+        setError('Invalid or expired promo code.');
+      }
+    } catch {
+      setError('Invalid or expired promo code.');
+    }
+  };
+
   const handleReviewClick = () => { if (validateForm()) setShowConfirmModal(true); };
 
   const handlePaymentSuccess = async () => {
@@ -81,7 +104,7 @@ const EventBookingPage = () => {
       const bRes = await api.booking.post('', {
         userId: user.id, eventId: event.id,
         ticketsBooked: attendees.length,
-        totalAmount: event.price * attendees.length,
+        totalAmount: event.price * attendees.length - discountAmount,
         attendeeDetails: JSON.stringify(attendees),
         status: 'CONFIRMED'
       });
@@ -115,11 +138,11 @@ const EventBookingPage = () => {
 
   return (
     <div className="app-container page-transition">
-      <Modal show={showConfirmModal} title="Proceed to Payment?" message={`${attendees.length} slot(s) for "${event.eventName}" — Total ₹${total}.`}
+      <Modal show={showConfirmModal} title="Proceed to Payment?" message={`${attendees.length} slot(s) for "${event.eventName}" — Total ₹${(event.price * attendees.length - discountAmount).toFixed(2)}.`}
         onConfirm={() => { setShowConfirmModal(false); setShowPayment(true); }} onCancel={() => setShowConfirmModal(false)} />
 
       {showPayment && (
-        <PaymentModal amount={total} eventName={event.eventName}
+        <PaymentModal amount={(event.price * attendees.length - discountAmount)} eventName={event.eventName}
           onSuccess={handlePaymentSuccess}
           onCancel={() => setShowPayment(false)} />
       )}
@@ -169,25 +192,48 @@ const EventBookingPage = () => {
           </button>
         </div>
 
-        {/* RIGHT — Ledger */}
+              {/* RIGHT — Ledger */}
         <div className="glass-panel" style={{ padding: '3rem', borderTop: '4px solid var(--secondary)', alignSelf: 'start', position: 'sticky', top: '120px' }}>
           <h2 style={{ marginBottom: '2.5rem', fontSize: '1.2rem' }}>Transaction Ledger</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginBottom: '2rem' }}>
-            {[['Slots', `× ${attendees.length}`], ['Per Slot', `₹${event.price}`], ['Available', `${event.availableTickets} left`]].map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>{k}</span>
-                <strong>{v}</strong>
+          
+          <div style={{ marginBottom: '2rem' }}>
+             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input type="text" placeholder="Promo Code" className="form-control" style={{ fontSize: '0.8rem', height: '40px' }} value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} />
+                <button className="btn-elite" onClick={handleApplyCoupon} style={{ padding: '0 1rem', fontSize: '0.7rem' }}>APPLY</button>
+             </div>
+             {appliedCoupon && <div className="bounce-in" style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 900, background: 'rgba(16,185,129,0.1)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--success)' }}>✅ PROMO: {appliedCoupon.code} ({appliedCoupon.discountPercent}% OFF)</div>}
+             
+             {availableCoupons.length > 0 && !appliedCoupon && (
+               <div style={{ marginTop: '1rem' }}>
+                  <div style={{ fontSize: '0.6rem', opacity: 0.4, fontWeight: 900, marginBottom: '0.6rem', letterSpacing: '1px' }}>APPLICABLE OFFERS</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {availableCoupons.map(c => (
+                      <span key={c.id} onClick={() => { setPromoCode(c.code); }} style={{ cursor: 'pointer', background: 'rgba(251,191,36,0.1)', border: '1px solid #fbbf24', color: '#fbbf24', fontSize: '0.65rem', padding: '0.3rem 0.6rem', borderRadius: '6px', fontWeight: 900, transition: '0.2s' }} onMouseOver={e => e.target.style.background='rgba(251,191,36,0.2)'} onMouseOut={e => e.target.style.background='rgba(251,191,36,0.1)'}>{c.code}</span>
+                    ))}
+                  </div>
+               </div>
+             )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginBottom: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
+            {[['Slots', `× ${attendees.length}`], ['Base Price', `₹${event.price * attendees.length}`], ['Discount', appliedCoupon ? `- ₹${discountAmount.toFixed(2)}` : '₹0.00']].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ opacity: 0.6, fontSize: '0.85rem' }}>{k}</span>
+                <span style={{ fontWeight: 800, color: k === 'Discount' ? 'var(--success)' : 'white', fontSize: k === 'Discount' ? '0.9rem' : '1rem' }}>{v}</span>
               </div>
             ))}
           </div>
-          <div style={{ borderTop: '2px dashed var(--glass-border)', paddingTop: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 900 }}>TOTAL</span>
-            <span style={{ fontSize: '2.2rem', fontWeight: 950, color: 'var(--success)' }}>₹{total}</span>
+
+          <div style={{ borderTop: '2px dashed var(--glass-border)', paddingTop: '1.8rem', marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 900, letterSpacing: '1px' }}>TOTAL</span>
+            <span style={{ fontSize: '2.4rem', fontWeight: 950, color: 'var(--success)', letterSpacing: '-1px' }}>₹{(event.price * attendees.length - discountAmount).toFixed(2)}</span>
           </div>
-          <button onClick={handleReviewClick} disabled={loading} className="btn-primary" style={{ height: '58px', fontSize: '1rem' }}>
+
+          <button onClick={handleReviewClick} disabled={loading} className="btn-primary" style={{ height: '62px', fontSize: '1.1rem', letterSpacing: '1px' }}>
             {loading ? 'PROCESSING...' : '🔒 PROCEED TO PAYMENT'}
           </button>
-          <p style={{ textAlign: 'center', opacity: 0.25, fontSize: '0.65rem', marginTop: '1rem' }}>Secured by 256-bit SSL encryption</p>
+          <p style={{ textAlign: 'center', opacity: 0.25, fontSize: '0.65rem', marginTop: '1.5rem' }}>Secured by 256-bit SSL encryption</p>
+        </div>}}>Secured by 256-bit SSL encryption</p>
         </div>
       </div>
     </div>

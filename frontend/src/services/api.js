@@ -7,6 +7,7 @@ const LOCAL_URLS = {
     USER_SERVICE: "http://localhost:8081/api/users",
     EVENT_SERVICE: "http://localhost:8082/api/events",
     BOOKING_SERVICE: "http://localhost:8083/api/bookings",
+    COUPON_SERVICE: "http://localhost:8083/api/coupons",
     SUPPORT_SERVICE: "http://localhost:8081/api/support"
 };
 
@@ -14,6 +15,7 @@ const CLOUD_URLS = {
     USER_SERVICE: "https://your-users.render.com/api/users",
     EVENT_SERVICE: "https://your-events.render.com/api/events",
     BOOKING_SERVICE: "https://your-bookings.render.com/api/bookings",
+    COUPON_SERVICE: "https://your-bookings.render.com/api/coupons",
     SUPPORT_SERVICE: "https://your-users.render.com/api/support"
 };
 
@@ -23,6 +25,7 @@ const api = {
     user: axios.create({ baseURL: URLS.USER_SERVICE }),
     event: axios.create({ baseURL: URLS.EVENT_SERVICE }),
     booking: axios.create({ baseURL: URLS.BOOKING_SERVICE }),
+    coupon: axios.create({ baseURL: URLS.COUPON_SERVICE }),
     support: axios.create({ baseURL: URLS.SUPPORT_SERVICE })
 };
 
@@ -40,6 +43,7 @@ const applyResilience = (inst) => {
 applyResilience(api.user);
 applyResilience(api.event);
 applyResilience(api.booking);
+applyResilience(api.coupon);
 applyResilience(api.support);
 
 export default api;
