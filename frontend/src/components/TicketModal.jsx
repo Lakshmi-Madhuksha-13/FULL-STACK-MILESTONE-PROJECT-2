@@ -8,16 +8,7 @@ const TicketModal = ({ booking, event, user, onClose }) => {
   if (!booking || !event) return null;
 
   // Encode full ticket data into the QR — scannable and verifiable
-  const qrData = JSON.stringify({
-    passId: `TF-${booking.id}`,
-    event: event.eventName,
-    venue: event.venue,
-    holder: user?.name || 'Participant',
-    slots: booking.ticketsBooked,
-    amount: booking.totalAmount,
-    status: booking.status || 'CONFIRMED',
-    issued: new Date().toISOString().split('T')[0],
-  });
+  const qrData = `http://localhost:5173/admin?verify=TF-${booking.id}`;
 
   const handleDownloadPDF = async () => {
     const canvas = await html2canvas(ticketRef.current, {
@@ -122,7 +113,7 @@ const TicketModal = ({ booking, event, user, onClose }) => {
               { label: 'HOLDER', value: user?.name || attendees[0]?.name || 'Participant' },
               { label: 'SLOTS', value: `× ${booking.ticketsBooked}` },
               { label: 'AMOUNT', value: `₹${booking.totalAmount}` },
-              { label: 'STATUS', value: booking.status || 'CONFIRMED', statusColor: isCancelled ? '#f43f5e' : '#10b981' },
+              { label: 'STATUS', value: booking.status === 'CONFIRMED' ? 'NOT VERIFIED' : (booking.status || 'CONFIRMED'), statusColor: isCancelled ? '#f43f5e' : (booking.status === 'ADMITTED' ? '#3b82f6' : '#10b981') },
             ].map(({ label, value, statusColor }) => (
               <div key={label}>
                 <div style={{ fontSize: '0.58rem', fontWeight: 900, color: '#94a3b8', letterSpacing: '1.5px', marginBottom: '0.2rem' }}>{label}</div>

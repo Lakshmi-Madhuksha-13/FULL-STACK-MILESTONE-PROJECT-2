@@ -100,6 +100,20 @@ const AdminDashboard = () => {
     if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [supportMsgs, selectedUserId]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qVerify = params.get('verify');
+    if (qVerify && bookings.length > 0) {
+      setActiveTab('verify');
+      setVerifyId(qVerify);
+      const idStr = qVerify.replace(/[^0-9]/g, '');
+      const b = bookings.find(bk => bk.id === parseInt(idStr));
+      setVerificationResult(b || 'NOT_FOUND');
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [bookings, isLoaded]);
+
   // Grouped support by user
   const supportByUser = supportMsgs.reduce((acc, m) => {
     if (!m?.userId) return acc;
@@ -152,9 +166,16 @@ const AdminDashboard = () => {
   const handleUpdateBookingStatus = (b, status) => {
     showModal(`Mark as ${status}?`, `Update entry pass TF-${b.id} status to "${status}"?`, async () => {
       closeModal();
-      await api.booking.put(`/${b.id}/status`, { status });
-      showToast(`Status updated to ${status}`);
-      fetchAll();
+      try {
+        await api.booking.put(`/${b.id}/status`, { status });
+        setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status } : bk));
+        if (verificationResult && verificationResult.id === b.id) {
+          setVerificationResult({ ...verificationResult, status });
+        }
+        showToast(`Status updated to ${status}`);
+      } catch {
+        showToast('Status update failed.', false);
+      }
     }, status === 'CANCELLED');
   };
 
@@ -335,27 +356,48 @@ const AdminDashboard = () => {
         {/* ── BOOKING AUDIT ── */}
         {activeTab === 'audit' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Booking Audit & Status Control</h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>View all entry passes and manage their financial status.</p>
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Booking Audit & Ledger</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Track and manage all issued entry passes.</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '3rem' }}>
+              <div className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--accent)' }}>
+                <div style={{ fontSize: '0.7rem', opacity: 0.5, letterSpacing: '1px', marginBottom: '0.5rem' }}>PENDING VERIFICATION</div>
+                <div style={{ fontSize: '2rem', fontWeight: 950 }}>{bookings.filter(b => b.status === 'CONFIRMED').length}</div>
+              </div>
+              <div className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--success)' }}>
+                <div style={{ fontSize: '0.7rem', opacity: 0.5, letterSpacing: '1px', marginBottom: '0.5rem' }}>OFFICIALLY ADMITTED</div>
+                <div style={{ fontSize: '2rem', fontWeight: 950 }}>{bookings.filter(b => b.status === 'ADMITTED').length}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1rem', opacity: 0.6 }}>Filter:</h3>
+              {['ALL', 'CONFIRMED', 'ADMITTED', 'CANCELLED'].map(f => (
+                <button key={f} className="innovative-badge" style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => {/* Future Filtering */}}>{f}</button>
+              ))}
+            </div>
+
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead style={{ borderBottom: '1px solid var(--glass-border)', fontSize: '0.7rem', opacity: 0.5 }}>
-                  <tr>{['PASS ID', 'EVENT', 'AMOUNT', 'SLOTS', 'STATUS', 'ACTION'].map(h => <th key={h} style={{ padding: '1rem' }}>{h}</th>)}</tr>
+                  <tr>{['PASS ID', 'EVENT', 'USER', 'SLOTS', 'STATUS', 'ACTION'].map(h => <th key={h} style={{ padding: '1rem' }}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {bookings.map(b => {
                     const evName = events.find(e => e.id === b.eventId)?.eventName || `#${b.eventId}`;
+                    const usr = users.find(u => u.id === b.userId);
                     return (
                       <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                         <td style={{ padding: '1.5rem 1rem', fontWeight: 900 }}>TF-{b.id}</td>
                         <td style={{ padding: '1.5rem 1rem', color: 'var(--primary)', fontWeight: 700 }}>{evName}</td>
-                        <td style={{ padding: '1.5rem 1rem', color: 'var(--success)', fontWeight: 700 }}>₹{b.totalAmount}</td>
+                        <td style={{ padding: '1.5rem 1rem' }}>{usr?.name || 'Unknown'}</td>
                         <td style={{ padding: '1.5rem 1rem', opacity: 0.7 }}>{b.ticketsBooked}</td>
                         <td style={{ padding: '1.5rem 1rem' }}><StatusBadge status={b.status || 'CONFIRMED'} /></td>
                         <td style={{ padding: '1.5rem 1rem' }}>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            {b.status !== 'CANCELLED' && <button className="btn-elite" onClick={() => handleUpdateBookingStatus(b, 'CANCELLED')} style={{ background: 'var(--accent)', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.9rem' }}>CANCEL</button>}
-                            {b.status === 'CANCELLED' && <button className="btn-elite" onClick={() => handleUpdateBookingStatus(b, 'REFUNDED')} style={{ background: '#fbbf24', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.9rem', color: '#000' }}>MARK REFUNDED</button>}
+                            {b.status === 'CONFIRMED' && <button className="btn-elite" onClick={() => handleUpdateBookingStatus(b, 'ADMITTED')} style={{ background: 'var(--success)', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.9rem', color: 'white' }}>ADMIT</button>}
+                            {b.status === 'CONFIRMED' && <button className="btn-elite" onClick={() => handleUpdateBookingStatus(b, 'CANCELLED')} style={{ background: 'var(--accent)', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.9rem' }}>CANCEL</button>}
+                            {b.status === 'CANCELLED' && <button className="btn-elite" onClick={() => handleUpdateBookingStatus(b, 'REFUNDED')} style={{ background: '#fbbf24', border: 'none', fontSize: '0.65rem', padding: '0.4rem 0.9rem', color: '#000' }}>REFUND</button>}
                           </div>
                         </td>
                       </tr>

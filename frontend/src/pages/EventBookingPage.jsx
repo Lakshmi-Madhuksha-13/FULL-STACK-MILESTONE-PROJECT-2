@@ -33,6 +33,7 @@ const EventBookingPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [createdBookingId, setCreatedBookingId] = useState(null);
 
   const user = (() => { try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s) : null; } catch { return null; } })();
 
@@ -77,13 +78,14 @@ const EventBookingPage = () => {
     setShowPayment(false);
     setLoading(true);
     try {
-      await api.booking.post('', {
+      const bRes = await api.booking.post('', {
         userId: user.id, eventId: event.id,
         ticketsBooked: attendees.length,
         totalAmount: event.price * attendees.length,
         attendeeDetails: JSON.stringify(attendees),
         status: 'CONFIRMED'
       });
+      if (bRes.data && bRes.data.id) setCreatedBookingId(bRes.data.id);
       // Give coins (Gamification)
       try { 
         const cRes = await api.user.put(`/${user.id}/coins`, { coins: 50 * attendees.length }); 
@@ -99,6 +101,10 @@ const EventBookingPage = () => {
     <div className="app-container page-transition" style={{ textAlign: 'center', paddingTop: '8rem' }}>
       <div style={{ fontSize: '6rem', marginBottom: '1.5rem' }}>🎉</div>
       <h1 className="gradient-text" style={{ fontSize: '3rem' }}>Payment Complete!</h1>
+      <div style={{ margin: '2rem 0', padding: '1.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: '12px', border: '1px solid var(--success)', display: 'inline-block' }}>
+        <div style={{ fontSize: '0.8rem', opacity: 0.6, letterSpacing: '2px', fontWeight: 900 }}>OFFICIAL TICKET ID</div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 950, color: 'var(--success)', fontFamily: 'monospace' }}>TF-{createdBookingId}</div>
+      </div>
       <p style={{ color: 'var(--text-dim)', fontSize: '1.1rem', marginTop: '1rem' }}>Your entry pass is now live. Redirecting to your vault...</p>
     </div>
   );
