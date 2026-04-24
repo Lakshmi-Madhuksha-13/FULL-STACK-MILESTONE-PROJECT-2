@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -165,7 +165,7 @@ const TicketModal = ({ booking, event, user, onClose }) => {
             borderRadius: '16px', border: '2px solid #e2e8f0',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}>
-            <QRCodeSVG
+            <QRCodeCanvas
               value={qrData}
               size={140}
               level="H"
