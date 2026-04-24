@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
@@ -37,26 +37,35 @@ const Login = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setLoading(true);
-    try {
-      const decoded = jwtDecode(credentialResponse.credential);
-      const response = await api.user.post('/google-login', {
-        email: decoded.email,
-        name: decoded.name,
-      });
-      const user = response.data;
-      if (user && user.id) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        if (user.role === 'ADMIN') navigate('/admin');
-        else navigate('/events');
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        // Fetch user info from Google using the access token
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const decoded = await res.json();
+        
+        const response = await api.user.post('/google-login', {
+          email: decoded.email,
+          name: decoded.name,
+        });
+        const user = response.data;
+        if (user && user.id) {
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          if (user.role === 'ADMIN') navigate('/admin');
+          else navigate('/events');
+        }
+      } catch (err) {
+        setError('Google Authentication Failed.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError('Google Authentication Failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    onError: () => setError('Google Authentication Failed'),
+    prompt: 'select_account',
+  });
 
   return (
     <div className="app-container page-transition" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -75,13 +84,15 @@ const Login = () => {
         </form>
 
         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError('Google Authentication Failed')}
-            useOneTap
-            theme="filled_black"
-            shape="pill"
-          />
+          <button 
+            type="button" 
+            onClick={() => googleLogin()} 
+            className="btn-elite" 
+            style={{ width: '100%', background: '#fff', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', border: 'none', fontWeight: 700 }}
+          >
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" style={{ width: '20px' }} />
+            CONTINUE WITH GOOGLE
+          </button>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.9rem' }}>

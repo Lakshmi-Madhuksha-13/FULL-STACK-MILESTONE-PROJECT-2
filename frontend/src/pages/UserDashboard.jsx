@@ -29,6 +29,7 @@ const StatusBadge = ({ status }) => {
     CONFIRMED: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', border: '#10b981', label: '✅ CONFIRMED' },
     CANCELLED: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e', border: '#f43f5e', label: '🚫 CANCELLED' },
     REFUNDED:  { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '#fbbf24', label: '💰 REFUNDED' },
+    ADMITTED:  { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', border: '#3b82f6', label: '🎟️ ADMITTED' },
   };
   const s = map[status] || map.CONFIRMED;
   return (

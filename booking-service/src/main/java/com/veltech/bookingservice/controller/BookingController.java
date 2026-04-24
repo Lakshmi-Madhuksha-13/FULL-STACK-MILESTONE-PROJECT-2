@@ -64,6 +64,8 @@ public class BookingController {
                 notification.put("message", "BOOKING_CANCELLED: Your entry pass for Event #" + booking.getEventId() + " was cancelled by the ADMIN. Refund is PROCESSING.");
             } else if (newStatus.equals("REFUNDED")) {
                 notification.put("message", "REFUND_PROCESSED: Your refund for Event #" + booking.getEventId() + " has been fully processed by the ADMIN.");
+            } else if (newStatus.equals("ADMITTED")) {
+                notification.put("message", "ACCESS_GRANTED: Your entry pass for Event #" + booking.getEventId() + " has been scanned and verified. Welcome to the event!");
             } else {
                 notification.put("message", "STATUS_UPDATE: Your booking for Event #" + booking.getEventId() + " status changed to " + newStatus);
             }

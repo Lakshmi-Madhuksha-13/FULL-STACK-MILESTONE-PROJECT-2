@@ -29,6 +29,7 @@ const StatusBadge = ({ status }) => {
     CONFIRMED: { bg: 'rgba(16,185,129,0.1)', color: '#10b981', label: '✅ CONFIRMED' },
     CANCELLED: { bg: 'rgba(244,63,94,0.1)', color: '#f43f5e', label: '🚫 CANCELLED' },
     REFUNDED:  { bg: 'rgba(251,191,36,0.1)', color: '#fbbf24', label: '💰 REFUNDED' },
+    ADMITTED:  { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', label: '🎟️ ADMITTED' },
   };
   const s = map[status] || map.CONFIRMED;
   return <span style={{ ...s, padding: '0.25rem 0.8rem', borderRadius: '2rem', fontSize: '0.65rem', fontWeight: 900, border: `1px solid ${s.color}` }}>{s.label}</span>;
@@ -439,6 +440,16 @@ const AdminDashboard = () => {
                       <span style={{ fontWeight: 700, color: 'var(--success)' }}>₹{b.totalAmount}</span>
                     </div>
                   </div>
+
+                  {isValid && b.status !== 'ADMITTED' && (
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => handleUpdateBookingStatus(b, 'ADMITTED')} 
+                      style={{ marginTop: '2rem', width: '100%', height: '55px', background: 'var(--primary)', fontWeight: 900 }}
+                    >
+                      GRANT ENTRY & ADMIT USER
+                    </button>
+                  )}
                 </div>
               );
             })()}
