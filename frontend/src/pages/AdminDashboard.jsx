@@ -37,7 +37,14 @@ const StatusBadge = ({ status }) => {
 
 /* ─── ADMIN DASHBOARD ───────────────────────────────────── */
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('events');
+  const currentUser = (() => {
+    try { const s = localStorage.getItem('currentUser'); return s && s !== 'undefined' ? JSON.parse(s) : null; } catch { return null; }
+  })();
+
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const isVolunteer = currentUser?.role === 'VOLUNTEER';
+
+  const [activeTab, setActiveTab] = useState(isVolunteer ? 'verify' : 'events');
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -83,7 +90,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'ADMIN') return;
+    if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'VOLUNTEER')) return;
     fetchAll();
     fetchCoupons();
     const i = setInterval(fetchAll, 8000);
@@ -187,7 +194,7 @@ const AdminDashboard = () => {
     fetchSupport();
   };
 
-  if (!currentUser || currentUser.role !== 'ADMIN') return (
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'VOLUNTEER')) return (
     <div className="app-container" style={{ textAlign: 'center', padding: '10rem' }}>
       <h2>Access Forbidden</h2>
     </div>
@@ -241,7 +248,8 @@ const AdminDashboard = () => {
     a.click();
   };
 
-  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Control'], ['coupons', 'Promo Codes'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
+  const ALL_TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Control'], ['coupons', 'Promo Codes'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
+  const TABS = isAdmin ? ALL_TABS : ALL_TABS.filter(t => ['verify', 'support', 'activity'].includes(t[0]));
 
   // Chart Data Preparation
   const revenueData = useMemo(() => {
@@ -280,24 +288,33 @@ const AdminDashboard = () => {
       )}
 
       {/* ── CENTERED HERO METRICS ── */}
-      <div style={{ textAlign: 'center', margin: '4rem 0 5rem 0' }}>
-        <h1 className="gradient-text" style={{ fontSize: '4rem', fontWeight: 950, letterSpacing: '-3px', margin: '0 0 0.5rem 0' }}>Command Center</h1>
-        <p style={{ color: 'var(--success)', letterSpacing: '2px', fontSize: '0.65rem', fontWeight: 900, marginBottom: '4rem' }}>● OPERATIONAL PULSE: ALL SYSTEMS ONLINE</p>
+      {isAdmin && (
+        <div style={{ textAlign: 'center', margin: '4rem 0 5rem 0' }}>
+          <h1 className="gradient-text" style={{ fontSize: '4rem', fontWeight: 950, letterSpacing: '-3px', margin: '0 0 0.5rem 0' }}>Command Center</h1>
+          <p style={{ color: 'var(--success)', letterSpacing: '2px', fontSize: '0.65rem', fontWeight: 900, marginBottom: '4rem' }}>● OPERATIONAL PULSE: ALL SYSTEMS ONLINE</p>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '5rem', flexWrap: 'wrap' }}>
-          {[
-            { label: 'GROSS REVENUE', val: `₹${totalRevenue.toLocaleString()}`, color: 'var(--success)' },
-            { label: 'ACTIVE PASSES', val: totalTickets, color: 'var(--primary)' },
-            { label: 'MEMBER BASE', val: users.length, color: 'var(--secondary)' },
-            { label: 'LIVE EVENTS', val: events.length, color: '#fbbf24' },
-          ].map(({ label, val, color }) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, letterSpacing: '3px', marginBottom: '0.5rem' }}>{label}</div>
-              <div style={{ fontSize: '3.8rem', fontWeight: 950, letterSpacing: '-2px', color }}>{val}</div>
-            </div>
-          ))}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '5rem', flexWrap: 'wrap' }}>
+            {[
+              { label: 'GROSS REVENUE', val: `₹${totalRevenue.toLocaleString()}`, color: 'var(--success)' },
+              { label: 'ACTIVE PASSES', val: totalTickets, color: 'var(--primary)' },
+              { label: 'MEMBER BASE', val: users.length, color: 'var(--secondary)' },
+              { label: 'LIVE EVENTS', val: events.length, color: '#fbbf24' },
+            ].map(({ label, val, color }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, letterSpacing: '3px', marginBottom: '0.5rem' }}>{label}</div>
+                <div style={{ fontSize: '3.8rem', fontWeight: 950, letterSpacing: '-2px', color }}>{val}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {isVolunteer && (
+        <div style={{ textAlign: 'center', margin: '4rem 0 5rem 0' }}>
+           <h1 className="gradient-text" style={{ fontSize: '3.5rem', fontWeight: 950, letterSpacing: '-2px', margin: '0 0 0.5rem 0' }}>Volunteer Portal</h1>
+           <p style={{ color: 'var(--primary)', letterSpacing: '2px', fontSize: '0.65rem', fontWeight: 900, marginBottom: '4rem' }}>● STAFF IDENTITY: {currentUser.name.toUpperCase()}</p>
+        </div>
+      )}
 
       {/* TABS */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '3.5rem', flexWrap: 'wrap' }}>
