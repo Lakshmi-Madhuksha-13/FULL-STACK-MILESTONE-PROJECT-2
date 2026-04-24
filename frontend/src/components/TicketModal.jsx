@@ -138,7 +138,9 @@ const TicketModal = ({ booking, event, user, onClose }) => {
               <div style={{ fontSize: '0.58rem', fontWeight: 900, color: '#94a3b8', letterSpacing: '1.5px', marginBottom: '0.8rem' }}>REGISTERED ATTENDEES</div>
               {attendees.slice(0, 3).map((a, i) => (
                 <div key={i} style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700, marginBottom: '0.3rem' }}>
-                  {i + 1}. {typeof a === 'string' ? a : a.name} {a.email && <span style={{ color: '#64748b', fontWeight: 400 }}>— {a.email}</span>}
+                  {i + 1}. {typeof a === 'string' ? a : a.name} 
+                  {a.email && <span style={{ color: '#64748b', fontWeight: 400 }}> — {a.email}</span>}
+                  {a.university && <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginLeft: '1rem', marginTop: '0.1rem', fontWeight: 600 }}>{a.department} • {a.university} • {a.yearOfStudy}</div>}
                 </div>
               ))}
               {attendees.length > 3 && <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>+ {attendees.length - 3} more</div>}

@@ -24,7 +24,7 @@ const EventBookingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
-  const [attendees, setAttendees] = useState([{ name: '', email: '' }]);
+  const [attendees, setAttendees] = useState([{ name: '', email: '', department: '', university: '', yearOfStudy: '' }]);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [allEvents, setAllEvents] = useState([]);
@@ -61,12 +61,12 @@ const EventBookingPage = () => {
     }
   }, [event, allEvents, userBookings]);
 
-  const addAttendee = () => { if (attendees.length < (event?.availableTickets || 0)) setAttendees([...attendees, { name: '', email: '' }]); };
+  const addAttendee = () => { if (attendees.length < (event?.availableTickets || 0)) setAttendees([...attendees, { name: '', email: '', department: '', university: '', yearOfStudy: '' }]); };
   const removeAttendee = i => { if (attendees.length > 1) setAttendees(attendees.filter((_, idx) => idx !== i)); };
   const updateAttendee = (i, field, val) => { const a = [...attendees]; a[i][field] = val; setAttendees(a); };
 
   const validateForm = () => {
-    if (attendees.some(a => !a.name.trim() || !a.email.trim())) { setError('Please fill Name and Email for all attendees.'); return false; }
+    if (attendees.some(a => !a.name.trim() || !a.email.trim() || !a.department.trim() || !a.university.trim() || !a.yearOfStudy.trim())) { setError('Please fill all fields (Name, Email, Department, University, Year) for all attendees.'); return false; }
     if (attendees.some(a => !/\S+@\S+\.\S+/.test(a.email))) { setError('Please enter valid email addresses.'); return false; }
     setError(''); return true;
   };
@@ -135,8 +135,23 @@ const EventBookingPage = () => {
                 <span>SLOT #{i + 1}</span>
                 {attendees.length > 1 && <button onClick={() => removeAttendee(i)} style={{ background: 'transparent', border: 'none', color: 'var(--vivid-pink)', cursor: 'pointer', fontWeight: 900, fontSize: '0.68rem' }}>✕ REMOVE</button>}
               </div>
-              <input type="text" placeholder="Full Name *" className="form-control" value={a.name} onChange={e => updateAttendee(i, 'name', e.target.value)} style={{ marginBottom: '0.8rem' }} />
-              <input type="email" placeholder="Email Address *" className="form-control" value={a.email} onChange={e => updateAttendee(i, 'email', e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
+                <input type="text" placeholder="Full Name *" className="form-control" value={a.name} onChange={e => updateAttendee(i, 'name', e.target.value)} />
+                <input type="email" placeholder="Email Address *" className="form-control" value={a.email} onChange={e => updateAttendee(i, 'email', e.target.value)} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
+                <input type="text" placeholder="Department *" className="form-control" value={a.department} onChange={e => updateAttendee(i, 'department', e.target.value)} />
+                <input type="text" placeholder="University *" className="form-control" value={a.university} onChange={e => updateAttendee(i, 'university', e.target.value)} />
+                <select className="form-control" value={a.yearOfStudy} onChange={e => updateAttendee(i, 'yearOfStudy', e.target.value)} style={{ color: a.yearOfStudy ? 'white' : 'var(--text-dim)' }}>
+                  <option value="" disabled>Year of Study *</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="Postgraduate">Postgraduate</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
           ))}
           <button onClick={addAttendee} disabled={attendees.length >= event.availableTickets}

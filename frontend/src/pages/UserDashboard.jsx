@@ -238,7 +238,7 @@ const UserDashboard = () => {
     </div>
   );
 
-  const TABS = [['bookings','Ticket Inventory'], ['refunds','Refund Tracker'], ['notifications','Inbox'], ['support','Live Support']];
+  const TABS = [['bookings','Ticket Inventory'], ['refunds','Refund Tracker'], ['certificates','E-Certificates'], ['rewards','Rewards Center'], ['notifications','Inbox'], ['support','Live Support']];
 
   return (
     <div className="app-container page-transition" style={{ minHeight: '100vh' }}>
@@ -297,23 +297,14 @@ const UserDashboard = () => {
                         <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CONFIRMED'} /></div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                        {ev?.dateTime && new Date(ev.dateTime) < new Date() ? (
-                          <button className="btn-elite" onClick={() => generateCertificate(user, ev)}
-                            style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: '#fbbf24', border: 'none', color: 'black' }}>
-                            🏆 CLAIM CERTIFICATE
-                          </button>
-                        ) : (
-                          <>
-                            <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
-                              style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(139,92,246,0.15)', border: '1px solid var(--primary)' }}>
-                              🎟 VIEW PASS
-                            </button>
-                            <button className="btn-elite" onClick={() => handleCancelBooking(b)}
-                              style={{ background: 'var(--accent)', border: 'none', fontSize: '0.75rem', padding: '0.6rem 1.4rem' }}>
-                              CANCEL
-                            </button>
-                          </>
-                        )}
+                        <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
+                          style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(139,92,246,0.15)', border: '1px solid var(--primary)' }}>
+                          🎟 VIEW PASS
+                        </button>
+                        <button className="btn-elite" onClick={() => handleCancelBooking(b)}
+                          style={{ background: 'var(--accent)', border: 'none', fontSize: '0.75rem', padding: '0.6rem 1.4rem' }}>
+                          CANCEL
+                        </button>
                       </div>
                     </div>
                   );
@@ -337,26 +328,26 @@ const UserDashboard = () => {
                 {cancelledBookings.map(b => {
                   const ev = allEvents.find(e => e.id === b.eventId);
                   return (
-                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(244,63,94,0.03)', borderLeft: '4px solid var(--accent)' }}>
+                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(244,63,94,0.03)', borderLeft: b.status === 'REFUNDED' ? '4px solid #fbbf24' : '4px solid var(--accent)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
-                          <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.3rem' }}>{ev?.eventName || `Event #${b.eventId}`}</div>
-                          <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>TF-{b.id} • ₹{b.totalAmount} • {b.ticketsBooked} slot(s)</div>
+                          <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Event #${b.eventId}`}</div>
+                          <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.3rem' }}>TF-{b.id} • {ev?.venue || 'Venue TBD'} • ₹{b.totalAmount}</div>
+                          <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CANCELLED'} /></div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                          <StatusBadge status={b.status || 'CANCELLED'} />
                           <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
-                            style={{ fontSize: '0.7rem', padding: '0.5rem 1.2rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>
-                            VIEW VOIDED PASS
+                            style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>
+                            🎟 VIEW VOIDED PASS
                           </button>
                         </div>
                       </div>
-                      <div style={{ marginTop: '1.5rem', padding: '1rem 1.2rem', background: 'rgba(251,191,36,0.05)', border: '1px dashed rgba(251,191,36,0.3)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span style={{ fontSize: '1.5rem' }}>💰</span>
+                      <div style={{ marginTop: '1.5rem', padding: '1rem 1.2rem', background: b.status === 'REFUNDED' ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', border: b.status === 'REFUNDED' ? '1px dashed rgba(251,191,36,0.3)' : '1px dashed var(--glass-border)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>{b.status === 'REFUNDED' ? '💰' : '⏳'}</span>
                         <div>
-                          <div style={{ fontWeight: 900, color: '#fbbf24', fontSize: '0.85rem' }}>REFUND STATUS: {b.status === 'REFUNDED' ? 'COMPLETED' : 'PROCESSING'}</div>
+                          <div style={{ fontWeight: 900, color: b.status === 'REFUNDED' ? '#fbbf24' : 'var(--text-main)', fontSize: '0.85rem' }}>REFUND STATUS: {b.status === 'REFUNDED' ? 'COMPLETED' : 'PROCESSING'}</div>
                           <div style={{ opacity: 0.5, fontSize: '0.72rem', marginTop: '0.2rem' }}>
-                            {b.status === 'REFUNDED' ? `₹${b.totalAmount} has been credited to your account.` : `Refund of ₹${b.totalAmount} will be credited within 5–7 business days.`}
+                            {b.status === 'REFUNDED' ? `₹${b.totalAmount} has been successfully credited back to your account.` : `Refund of ₹${b.totalAmount} is processing. It will be credited within 5–7 business days.`}
                           </div>
                         </div>
                       </div>
@@ -367,6 +358,70 @@ const UserDashboard = () => {
             ) : (
               <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No cancelled bookings. All your credentials are active.</div>
             )}
+          </div>
+        )}
+
+        {/* ── E-CERTIFICATES ── */}
+        {activeTab === 'certificates' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>E-Certificates</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Download certificates for events you have successfully attended.</p>
+            {activeBookings.filter(b => {
+              const ev = allEvents.find(e => e.id === b.eventId);
+              return ev?.dateTime && new Date(ev.dateTime) < new Date();
+            }).length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {activeBookings.map(b => {
+                  const ev = allEvents.find(e => e.id === b.eventId);
+                  if (!ev?.dateTime || new Date(ev.dateTime) >= new Date()) return null;
+                  return (
+                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', textAlign: 'center', background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
+                      <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.5rem' }}>{ev.eventName}</div>
+                      <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '1.5rem' }}>Conducted on: {new Date(ev.dateTime).toLocaleDateString()}</div>
+                      <button className="btn-primary" onClick={() => generateCertificate(user, ev)} style={{ width: '100%', background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#000' }}>
+                        ⬇ DOWNLOAD CERTIFICATE
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No completed events yet. Attend an event to earn a certificate!</div>
+            )}
+          </div>
+        )}
+
+        {/* ── REWARDS CENTER ── */}
+        {activeTab === 'rewards' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Rewards Center</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Redeem your Fest Coins for exclusive perks and discounts.</p>
+            
+            <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))', marginBottom: '3rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 900, opacity: 0.6, letterSpacing: '2px', marginBottom: '0.5rem' }}>YOUR BALANCE</div>
+              <div style={{ fontSize: '4rem', fontWeight: 950, color: '#fbbf24', textShadow: '0 0 20px rgba(251,191,36,0.4)' }}>
+                🪙 {user?.coins || 0}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {[
+                { title: 'VIP Front Row Pass', cost: 500, icon: '🌟', desc: 'Get guaranteed front row seating at any major event.' },
+                { title: 'Free Food Coupon', cost: 200, icon: '🍔', desc: 'Valid at any official food stall during the fest.' },
+                { title: 'Exclusive Fest T-Shirt', cost: 1000, icon: '👕', desc: 'Limited edition Technical Fest merchandise.' },
+              ].map(r => (
+                <div key={r.title} className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{r.icon}</div>
+                  <h3 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>{r.title}</h3>
+                  <p style={{ fontSize: '0.8rem', opacity: 0.6, flex: 1 }}>{r.desc}</p>
+                  <button className="btn-elite" onClick={() => showToast('Feature coming soon in V2! Keep earning coins.', true)}
+                    style={{ marginTop: '1.5rem', background: (user?.coins || 0) >= r.cost ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: (user?.coins || 0) >= r.cost ? 'white' : 'var(--text-dim)', border: 'none', width: '100%' }}>
+                    REDEEM ({r.cost} COINS)
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
