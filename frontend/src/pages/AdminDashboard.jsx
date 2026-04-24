@@ -46,6 +46,8 @@ const AdminDashboard = () => {
   const [modal, setModal] = useState({ show: false });
   const [editingEvent, setEditingEvent] = useState(null);
   const [newEvent, setNewEvent] = useState({ eventName: '', venue: '', department: '', dateTime: '', price: 0, totalTickets: 100, availableTickets: 100 });
+  const [verifyId, setVerifyId] = useState('');
+  const [verificationResult, setVerificationResult] = useState(null);
 
   // Support
   const [supportMsgs, setSupportMsgs] = useState([]);
@@ -168,7 +170,7 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
+  const TABS = [['analytics', 'Analytics Hub'], ['events', 'Event Hub'], ['users', 'Member Registry'], ['audit', 'Booking Audit'], ['verify', 'Pass Verification'], ['activity', 'Global Activity Logs'], ['support', 'Support Intel']];
 
   // Chart Data Preparation
   const revenueData = useMemo(() => {
@@ -362,6 +364,84 @@ const AdminDashboard = () => {
               </table>
               {isLoaded && !bookings.length && <p style={{ opacity: 0.3, textAlign: 'center', padding: '4rem' }}>No bookings in ledger.</p>}
             </div>
+          </div>
+        )}
+
+        {/* ── PASS VERIFICATION ── */}
+        {activeTab === 'verify' && (
+          <div className="page-transition" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Verify Entry Pass</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Enter the Ticket ID (e.g. TF-12) to verify its authenticity.</p>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem' }}>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Enter Pass ID (e.g., TF-12 or 12)" 
+                value={verifyId} 
+                onChange={e => setVerifyId(e.target.value)} 
+                onKeyPress={e => {
+                  if (e.key === 'Enter') {
+                    const idStr = verifyId.replace(/[^0-9]/g, '');
+                    const b = bookings.find(bk => bk.id === parseInt(idStr));
+                    setVerificationResult(b || 'NOT_FOUND');
+                  }
+                }}
+              />
+              <button className="btn-primary" onClick={() => {
+                const idStr = verifyId.replace(/[^0-9]/g, '');
+                const b = bookings.find(bk => bk.id === parseInt(idStr));
+                setVerificationResult(b || 'NOT_FOUND');
+              }} style={{ width: '150px', flexShrink: 0 }}>VERIFY</button>
+            </div>
+
+            {verificationResult === 'NOT_FOUND' && (
+              <div className="glass-panel bounce-in" style={{ padding: '3rem', border: '2px solid var(--accent)', background: 'rgba(244,63,94,0.05)' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>❌</div>
+                <h3 style={{ color: 'var(--accent)', fontWeight: 950 }}>INVALID PASS</h3>
+                <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '0.5rem' }}>No record exists for this Ticket ID in the database.</p>
+              </div>
+            )}
+
+            {verificationResult && verificationResult !== 'NOT_FOUND' && (() => {
+              const b = verificationResult;
+              const ev = events.find(e => e.id === b.eventId);
+              const usr = users.find(u => u.id === b.userId);
+              const isValid = b.status !== 'CANCELLED' && b.status !== 'REFUNDED';
+              
+              return (
+                <div className="glass-panel bounce-in" style={{ padding: '3rem', border: isValid ? '2px solid var(--success)' : '2px solid var(--accent)', background: isValid ? 'rgba(16,185,129,0.05)' : 'rgba(244,63,94,0.05)', textAlign: 'left' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{isValid ? '✅' : '🚫'}</div>
+                    <h3 style={{ color: isValid ? 'var(--success)' : 'var(--accent)', fontWeight: 950, fontSize: '1.8rem', letterSpacing: '1px' }}>
+                      {isValid ? 'ACCESS GRANTED' : 'ACCESS DENIED'}
+                    </h3>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.5rem', fontWeight: 700 }}>
+                      PASS ID: TF-{b.id} • STATUS: {b.status || 'CONFIRMED'}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '0.8rem' }}>
+                      <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 900, letterSpacing: '1px' }}>EVENT</span>
+                      <span style={{ fontWeight: 700 }}>{ev?.eventName || 'Unknown'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '0.8rem' }}>
+                      <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 900, letterSpacing: '1px' }}>REGISTERED TO</span>
+                      <span style={{ fontWeight: 700 }}>{usr?.name || 'Unknown User'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '0.8rem' }}>
+                      <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 900, letterSpacing: '1px' }}>SLOTS ADMITTED</span>
+                      <span style={{ fontWeight: 700 }}>{b.ticketsBooked} Person(s)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 900, letterSpacing: '1px' }}>TRANSACTION</span>
+                      <span style={{ fontWeight: 700, color: 'var(--success)' }}>₹{b.totalAmount}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
