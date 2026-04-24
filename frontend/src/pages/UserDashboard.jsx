@@ -301,7 +301,7 @@ const UserDashboard = () => {
                   return (
                     <div key={b.id} className="glass-panel" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', flexWrap: 'wrap', gap: '1rem' }}>
                       <div>
-                        <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Event #${b.eventId}`}</div>
+                        <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Archived Event`}</div>
                         <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.3rem' }}>TF-{b.id} • {ev?.venue || 'Venue TBD'} • ₹{b.totalAmount}</div>
                         <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CONFIRMED'} /></div>
                       </div>
@@ -340,7 +340,7 @@ const UserDashboard = () => {
                     <div key={b.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(244,63,94,0.03)', borderLeft: b.status === 'REFUNDED' ? '4px solid #fbbf24' : '4px solid var(--accent)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
-                          <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Event #${b.eventId}`}</div>
+                          <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Archived Event`}</div>
                           <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.3rem' }}>TF-{b.id} • {ev?.venue || 'Venue TBD'} • ₹{b.totalAmount}</div>
                           <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CANCELLED'} /></div>
                         </div>

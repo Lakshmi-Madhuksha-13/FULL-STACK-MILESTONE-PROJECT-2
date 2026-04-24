@@ -172,12 +172,6 @@ const TicketModal = ({ booking, event, user, onClose }) => {
               includeMargin={false}
               fgColor={isCancelled ? '#94a3b8' : '#1e1b4b'}
               bgColor="#ffffff"
-              imageSettings={{
-                src: '',
-                height: 0,
-                width: 0,
-                excavate: false,
-              }}
             />
           </div>
           <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.8rem', fontFamily: 'monospace', letterSpacing: '1px' }}>
