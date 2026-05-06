@@ -79,7 +79,7 @@ const Profile = () => {
             <label style={lbl}>EMAIL (READ ONLY)</label>
             <input type="email" className="form-control" value={user.email || ''} disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+          <div className="flex-stack-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
             <div>
               <label style={lbl}>DEPARTMENT</label>
               <input type="text" className="form-control" value={user.department || ''} onChange={e => setUser({ ...user, department: e.target.value })} placeholder="e.g. CSE" />
@@ -114,7 +114,7 @@ const Profile = () => {
       {/* QUICK LINKS */}
       <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
         <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', opacity: 0.4, letterSpacing: '2px' }}>QUICK ACCESS</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="flex-stack-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           {[
             { label: '🎟️ My Tickets', path: user.role === 'ADMIN' ? '/admin' : '/dashboard' },
             { label: '📅 Browse Events', path: '/events' },

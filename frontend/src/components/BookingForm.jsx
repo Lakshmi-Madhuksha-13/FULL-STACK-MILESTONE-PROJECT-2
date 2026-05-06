@@ -60,7 +60,25 @@ const BookingForm = ({ event, onBookingSuccess, user }) => {
     }
   };
 
+  const isAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
+  const isVolunteer = (user?.role || '').toUpperCase() === 'VOLUNTEER';
+
   if (!event || event.availableTickets === 0) return null;
+
+  if (isAdmin || isVolunteer) {
+    return (
+      <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', border: '2px dashed var(--accent)', background: 'rgba(244,63,94,0.02)' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>🛡️</div>
+          <h2 className="gradient-text" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Privilege Restriction</h2>
+          <p style={{ opacity: 0.7, lineHeight: 1.6, fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
+              Administrators and Volunteers are restricted from booking event tickets to preserve availability for participants.
+          </p>
+          <div style={{ marginTop: '2.5rem', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, letterSpacing: '2px' }}>
+              NEXUS AUDIT LOGGING ACTIVE
+          </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-panel" style={{ padding: '2.5rem' }}>

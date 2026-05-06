@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import TicketModal from '../components/TicketModal';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 
@@ -23,17 +25,133 @@ const Modal = ({ show, title, message, onConfirm, onCancel, confirmLabel = 'CONF
   );
 };
 
+/* ─── CERTIFICATE MODAL ────────────────────────────────── */
+const CertificateModal = ({ show, booking, event, user, onClose }) => {
+  const certRef = useRef();
+  if (!show || !booking || !event || !user) return null;
+  
+  const handleDownloadPDF = async () => {
+    const canvas = await html2canvas(certRef.current, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save(`Certificate-${user.name}-${booking.id}.pdf`);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', overflowY: 'auto' }}>
+      <style>{`
+        .btn-elite {
+          position: relative;
+          background: var(--primary);
+          color: white;
+          padding: 1rem 2rem;
+          border-radius: 0.75rem;
+          font-weight: 900;
+          border: none;
+          cursor: pointer;
+          z-index: 100 !important;
+          pointer-events: auto !important;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        .btn-elite:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.2);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Remove all click-blocking pseudo-elements */
+        .btn-elite::before, .btn-elite::after {
+          display: none !important;
+        }
+      `}</style>
+      <div className="page-transition" style={{ maxWidth: '1000px', width: '100%', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', zIndex: 101, position: 'relative' }}>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.6rem 1.2rem', borderRadius: '50px', cursor: 'pointer', fontWeight: 600 }}>✕ CLOSE</button>
+            <button onClick={handleDownloadPDF} style={{ background: 'var(--success)', border: 'none', color: 'white', padding: '0.6rem 2rem', borderRadius: '50px', cursor: 'pointer', fontWeight: 900, boxShadow: '0 10px 20px rgba(16,185,129,0.3)' }}>⬇ DOWNLOAD PDF</button>
+        </div>
+        
+        <div ref={certRef} className="certificate-paper" style={{ 
+          background: '#fff', color: '#1e293b', padding: '5rem', border: '20px solid #1e293b', 
+          borderImage: 'linear-gradient(45deg, #8b5cf6, #ec4899) 1', textAlign: 'center', 
+          position: 'relative', boxShadow: '0 50px 100px rgba(0,0,0,0.4)',
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
+        }}>
+          {/* Subtle Background Pattern */}
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.03, pointerEvents: 'none', backgroundImage: 'radial-gradient(#000 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '5px', color: '#8b5cf6', marginBottom: '2rem' }}>CERTIFICATE OF PARTICIPATION</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.5, marginBottom: '3rem' }}>TF-GEN-{booking.id.toString().padStart(6, '0')}</div>
+            
+            <div style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>This is to certify that</div>
+            <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#1e293b', marginBottom: '1rem', borderBottom: '2px solid #eee', display: 'inline-block', padding: '0 3rem' }}>{user.name}</div>
+            
+            <div style={{ fontSize: '1.2rem', marginTop: '2rem', lineHeight: 1.6 }}>
+              has successfully participated in the event<br/>
+              <strong style={{ fontSize: '1.8rem', color: '#ec4899' }}>{event.eventName}</strong><br/>
+              held at <strong>{event.venue}</strong>
+            </div>
+            
+            <div style={{ marginTop: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 4rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ borderBottom: '1px solid #000', width: '150px', marginBottom: '0.5rem' }}></div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900 }}>EVENT COORDINATOR</div>
+              </div>
+              
+              <div style={{ width: '100px', height: '100px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #8b5cf6' }}>
+                <div style={{ fontSize: '2rem' }}>🏆</div>
+              </div>
+              
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ borderBottom: '1px solid #000', width: '150px', marginBottom: '0.5rem' }}></div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900 }}>TECHNICAL DIRECTOR</div>
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '3rem', fontSize: '0.7rem', opacity: 0.4 }}>Issued on {new Date().toLocaleDateString()} • Verified by Nexus Protocol</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ─── STATUS BADGE ─────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
   const map = {
-    CONFIRMED: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', border: '#10b981', label: '🎫 NOT VERIFIED' },
+    CONFIRMED: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', border: '#10b981', label: '🎫 CONFIRMED' },
     CANCELLED: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e', border: '#f43f5e', label: '🚫 CANCELLED' },
     REFUNDED:  { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '#fbbf24', label: '💰 REFUNDED' },
     ADMITTED:  { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', border: '#3b82f6', label: '🎟️ ADMITTED' },
+    REJECTED:  { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e', border: '#f43f5e', label: '❌ REJECTED' },
   };
-  const s = map[status] || map.CONFIRMED;
+  const s = map[status?.toUpperCase()] || { bg: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '#94a3b8', label: status || 'PENDING' };
   return (
     <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: '0.3rem 0.9rem', borderRadius: '2rem', fontSize: '0.65rem', fontWeight: 900, letterSpacing: '1px' }}>
+      {s.label}
+    </span>
+  );
+};
+
+const RefundBadge = ({ status }) => {
+  const map = {
+    REQUESTED: { bg: 'rgba(244,63,94,0.1)', color: '#f43f5e', label: 'REQUESTED' },
+    PROCESSING: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', label: 'PROCESSING' },
+    APPROVED: { bg: 'rgba(16,185,129,0.1)', color: '#10b981', label: 'APPROVED' },
+    REJECTED: { bg: 'rgba(255,255,255,0.05)', color: '#94a3b8', label: 'REJECTED' },
+    REFUNDED: { bg: 'rgba(251,191,36,0.1)', color: '#fbbf24', label: 'REFUNDED' },
+  };
+  const s = map[status?.toUpperCase()] || { bg: 'rgba(255,255,255,0.05)', color: '#94a3b8', label: status || 'PENDING' };
+  return (
+    <span style={{ background: s.bg, color: s.color, padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 900 }}>
       {s.label}
     </span>
   );
@@ -47,7 +165,16 @@ const ChatPanel = ({ user }) => {
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => { try { const r = await api.support.get(`/history/${user.id}`); setMessages(Array.isArray(r.data) ? r.data : []); } catch { } };
+    const fetch = async () => { 
+      try { 
+        const r = await api.support.get(`/history/${user.id}`); 
+        const data = Array.isArray(r.data) ? r.data : [];
+        setMessages(prev => {
+          if (data.length === prev.length) return prev;
+          return data;
+        });
+      } catch { } 
+    };
     fetch();
     const i = setInterval(fetch, 4000);
     return () => clearInterval(i);
@@ -57,29 +184,58 @@ const ChatPanel = ({ user }) => {
 
   const send = async () => {
     if (!input.trim()) return;
-    await api.support.post('/send', { userId: user.id, senderName: user.name, message: input, type: 'USER' });
+    const userMsg = input.trim();
     setInput('');
+    
+    // Add user message to UI
+    const newUserMsg = { userId: user.id, senderName: user.name, message: userMsg, type: 'USER' };
+    setMessages(prev => [...prev, newUserMsg]);
+
+    try {
+      await api.support.post('/send', newUserMsg);
+      
+      // 🤖 AI INTEL RESPONSE
+      setTimeout(async () => {
+        let aiResponse = "I've received your query. Our team is reviewing your ticket status. Is there anything else I can assist with?";
+        const lowMsg = userMsg.toLowerCase();
+        
+        if (lowMsg.includes('ticket') || lowMsg.includes('show')) aiResponse = "Your tickets are located in the 'Ticket Inventory' tab. If it's blank, ensure your payment was successful or check 'Transaction History'.";
+        else if (lowMsg.includes('refund')) aiResponse = "Refunds take 3-5 days. You can track yours in the 'Refund Tracker' tab.";
+        else if (lowMsg.includes('coin') || lowMsg.includes('redeem')) aiResponse = "You earn coins by attending events. Redeem them for coupons in the 'Rewards Center'.";
+        else if (lowMsg.includes('certificate')) aiResponse = "Certificates are unlocked AFTER you attend an event. Check the 'My Certificates' tab.";
+        else if (lowMsg.includes('hello') || lowMsg.includes('hi')) aiResponse = "Greetings! I am Nexus AI. How can I help you with the technical fest today?";
+
+        const aiMsg = { userId: user.id, senderName: 'NEXUS AI', message: aiResponse, type: 'ADMIN' };
+        await api.support.post('/send', aiMsg);
+      }, 1500);
+    } catch { }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '500px', background: 'rgba(0,0,0,0.2)', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-      <div style={{ padding: '1.2rem 1.5rem', background: 'rgba(139,92,246,0.1)', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-        <div style={{ width: '8px', height: '8px', background: 'var(--success)', borderRadius: '50%', boxShadow: '0 0 8px var(--success)' }} />
-        <div><strong style={{ fontSize: '0.85rem' }}>LIVE SUPPORT HUB</strong><br /><small style={{ opacity: 0.4, fontSize: '0.6rem', letterSpacing: '1px' }}>MANAGEMENT ONLINE</small></div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '550px', background: 'rgba(0,0,0,0.2)', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+      <div style={{ padding: '1.2rem 1.5rem', background: 'rgba(139,92,246,0.1)', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ width: '8px', height: '8px', background: 'var(--success)', borderRadius: '50%', boxShadow: '0 0 8px var(--success)' }} />
+          <div><strong style={{ fontSize: '0.85rem' }}>SUPPORT CENTER</strong><br /><small style={{ opacity: 0.4, fontSize: '0.6rem', letterSpacing: '1px' }}>REAL-TIME ASSISTANCE</small></div>
+        </div>
       </div>
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {messages.length === 0 && <div style={{ textAlign: 'center', opacity: 0.2, marginTop: '4rem', fontSize: '0.85rem' }}>Send your first inquiry below.</div>}
+        {messages.length === 0 && <div style={{ textAlign: 'center', opacity: 0.2, marginTop: '4rem', fontSize: '0.85rem' }}>Start a conversation with our support team.</div>}
         {messages.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.type === 'USER' ? 'flex-end' : 'flex-start', background: m.type === 'USER' ? 'var(--primary)' : 'rgba(255,255,255,0.06)', padding: '0.8rem 1.1rem', borderRadius: '14px', maxWidth: '78%', fontSize: '0.85rem', border: m.type !== 'USER' ? '1px solid var(--glass-border)' : 'none', borderBottomRightRadius: m.type === 'USER' ? '2px' : '14px', borderBottomLeftRadius: m.type === 'USER' ? '14px' : '2px' }}>
-            {m.message}
-            <div style={{ fontSize: '0.6rem', opacity: 0.4, marginTop: '0.3rem', fontWeight: 'bold' }}>{m.type === 'USER' ? 'You' : '🛡️ Management'}</div>
+          <div key={i} style={{ alignSelf: m.type === 'USER' ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+             <div style={{ background: m.type === 'USER' ? 'var(--primary)' : 'rgba(255,255,255,0.06)', padding: '0.8rem 1.1rem', borderRadius: '14px', fontSize: '0.85rem', border: m.type !== 'USER' ? '1px solid var(--glass-border)' : 'none', borderBottomRightRadius: m.type === 'USER' ? '2px' : '14px', borderBottomLeftRadius: m.type === 'USER' ? '14px' : '2px' }}>
+                {m.message}
+             </div>
+             <div style={{ fontSize: '0.55rem', opacity: 0.4, marginTop: '0.3rem', textAlign: m.type === 'USER' ? 'right' : 'left' }}>
+                {m.senderName} • {new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+             </div>
           </div>
         ))}
       </div>
-      <div style={{ padding: '1rem', display: 'flex', gap: '0.8rem', background: 'rgba(0,0,0,0.2)' }}>
-        <input type="text" placeholder="Type your inquiry..." value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && send()}
-          style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'white', padding: '0.7rem 1rem', fontSize: '0.85rem', outline: 'none' }} />
-        <button onClick={send} style={{ width: '45px', height: '45px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer' }}>➔</button>
+      <div style={{ padding: '1.2rem', display: 'flex', gap: '0.8rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid var(--glass-border)' }}>
+        <input type="text" placeholder="Explain your issue..." value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && send()}
+          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: 'white', padding: '0.8rem 1.2rem', fontSize: '0.85rem', outline: 'none' }} />
+        <button onClick={send} className="btn-primary" style={{ width: '50px', height: '50px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>➔</button>
       </div>
     </div>
   );
@@ -88,421 +244,565 @@ const ChatPanel = ({ user }) => {
 /* ─── MAIN DASHBOARD ───────────────────────────────────── */
 const UserDashboard = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [activeTab, setActiveTab] = useState('bookings');
   const [countdown, setCountdown] = useState({ text: 'Syncing...', target: null });
   const [toast, setToast] = useState({ show: false, message: '', ok: true });
   const [modal, setModal] = useState({ show: false });
-  const [ticketView, setTicketView] = useState(null); // { booking, event }
+  const [ticketView, setTicketView] = useState(null);
+  const [certView, setCertView] = useState(null);
 
-  const user = (() => { try { const s = localStorage.getItem('currentUser'); return s && s !== 'undefined' ? JSON.parse(s) : null; } catch { return null; } })();
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('currentUser');
+      if (s && s !== 'undefined') {
+          const parsed = JSON.parse(s);
+          setUser(parsed);
+          // 🛡️ SECURITY: If staff accidentally lands here, redirect to console
+          const role = (parsed.role || '').toUpperCase();
+          if (role === 'ADMIN' || role === 'VOLUNTEER') navigate('/admin');
+      }
+      else navigate('/login');
+    } catch { navigate('/login'); }
+  }, [navigate]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!Array.isArray(allEvents) || !Array.isArray(bookings)) return;
+      const upcoming = allEvents
+        .filter(e => bookings.some(b => b && b.eventId && e && e.id && b.eventId.toString() === e.id.toString() && b.status === 'CONFIRMED'))
+        .map(e => ({ ...e, time: new Date(e.dateTime).getTime() }))
+        .filter(e => e.time > Date.now())
+        .sort((a, b) => a.time - b.time)[0];
+
+      if (upcoming) {
+        const diff = upcoming.time - Date.now();
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setCountdown({ text: `${d}d ${h}h ${m}m ${s}s`, target: upcoming.eventName });
+      } else {
+        setCountdown({ text: 'No upcoming events', target: null });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [allEvents, bookings]);
 
   const showToast = (message, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast({ show: false }), 4000); };
   const showModal = (title, message, onConfirm) => setModal({ show: true, title, message, onConfirm });
   const closeModal = () => setModal({ show: false });
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     try {
-      const [bRes, eRes, nRes] = await Promise.all([
-        api.booking.get(`/user/${user.id}`),
-        api.event.get(''),
-        api.user.get(`/${user.id}/notifications`).catch(() => ({ data: [] })),
+      console.log("[Portal Nexus]: Syncing data for User ID:", user.id);
+      const [bRes, eRes, nRes, wRes] = await Promise.all([
+        api.booking.get(`/user/${user.id}`).catch(err => { console.error("Booking Fetch Failed:", err); return { data: [] }; }),
+        api.event.get('').catch(err => { console.error("Event Fetch Failed:", err); return { data: [] }; }),
+        api.user.get(`/${user.id}/notifications`).catch(err => { console.error("Notif Fetch Failed:", err); return { data: [] }; }),
+        api.booking.get(`/waitlist/user/${user.id}`).catch(err => { console.error("Waitlist Fetch Failed:", err); return { data: [] }; }),
       ]);
-      setBookings(Array.isArray(bRes.data) ? bRes.data : []);
-      setAllEvents(Array.isArray(eRes.data) ? eRes.data : []);
-      setNotifications(Array.isArray(nRes.data) ? nRes.data : []);
+      
+      console.log("[Portal Nexus]: Sync successful. Records found:", bRes.data?.length);
+      
+      if (Array.isArray(bRes.data)) setBookings(bRes.data);
+      if (Array.isArray(eRes.data)) setAllEvents(eRes.data);
+      if (Array.isArray(nRes.data)) setNotifications(nRes.data);
+      if (Array.isArray(wRes.data)) setWaitlistEntries(wRes.data);
       setIsLoaded(true);
-    } catch { }
+    } catch (err) {
+      console.error("[Portal Nexus]: Critical Sync Failure:", err);
+      setIsLoaded(true);
+    }
   }, [user?.id]);
 
   useEffect(() => {
-    if (user) { 
+    if (user?.id) { 
       fetchAll();
-      // Setup WebSocket
-      const socket = new SockJS('http://localhost:8081/ws-stomp'); // Connect to User Service directly
-      const stompClient = Stomp.over(socket);
-      stompClient.debug = () => {}; // Disable debug logs
-      stompClient.connect({}, (frame) => {
-        stompClient.subscribe(`/topic/notifications/${user.id}`, (msg) => {
-          if (msg.body) {
-            const newNotif = JSON.parse(msg.body);
-            setNotifications(prev => [newNotif, ...prev]);
-            showToast(`🔔 ${newNotif.message}`);
-          }
-        });
-      });
+      const t = setInterval(fetchAll, 10000);
+      return () => clearInterval(t);
+    }
+  }, [user?.id, fetchAll]);
 
-      const i = setInterval(fetchAll, 7000); 
-      return () => { clearInterval(i); if (stompClient) stompClient.disconnect(); }; 
-    } 
-  }, [fetchAll]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      const upcoming = bookings.filter(b => b.status !== 'CANCELLED').map(b => {
-        const ev = allEvents.find(e => e.id === b.eventId);
-        if (!ev?.dateTime) return null;
-        const d = new Date(ev.dateTime);
-        return isNaN(d) || d < new Date() ? null : { date: d, name: ev.eventName };
-      }).filter(Boolean).sort((a, b) => a.date - b.date);
-
-      if (!upcoming.length) { setCountdown({ text: 'No Upcoming Events', target: null }); return; }
-      const diff = upcoming[0].date - new Date();
-      const d = Math.floor(diff/86400000), h = Math.floor((diff/3600000)%24), m = Math.floor((diff/60000)%60), s = Math.floor((diff/1000)%60);
-      setCountdown({ text: `${d}d ${h}h ${m}m ${s}s`, target: upcoming[0].name });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [bookings, allEvents]);
-
-  const handleCancelBooking = (b) => {
-    const evName = allEvents.find(e => e.id === b.eventId)?.eventName || `Event #${b.eventId}`;
-    showModal('Cancel & Request Refund?', `Cancel your entry pass for "${evName}" (TF-${b.id}) and initiate a refund? This cannot be undone.`, async () => {
+  const handleRequestRefund = (b) => {
+    const bEvId = b.eventId || b.event_id || b.event?.id;
+    const ev = allEvents.find(e => (e.id || e.eventId || '').toString() === (bEvId || '').toString());
+    const evName = ev?.eventName || `Ticket TF-${b.id}`;
+    
+    showModal('Cancel & Request Refund?', `Are you sure you want to cancel your pass for "${evName}"? This action will invalidate your ticket and initiate a refund.`, async () => {
       closeModal();
       try {
-        await api.booking.delete(`/${b.id}`);
-        setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status: 'CANCELLED' } : bk));
-        showToast('Pass cancelled. Refund initiated.');
-      } catch { showToast('Cancellation failed. Contact support.', false); }
+        console.log("[Portal Nexus]: Initiating revocation for TF-" + b.id);
+        await api.booking.put(`/${b.id}/refund-request`);
+        showToast('Booking cancelled. Refund in progress.');
+        fetchAll();
+      } catch (err) { 
+        console.error("Revocation Failed:", err);
+        showToast('Cancellation failed. Please try again.', false); 
+      }
     });
   };
 
-  const handleRestoreBooking = async (b) => {
-    try {
-      await api.booking.put(`/${b.id}/restore`);
-      setBookings(prev => prev.map(bk => bk.id === b.id ? { ...bk, status: 'CONFIRMED' } : bk));
-      showToast('Pass successfully restored!');
-    } catch {
-      showToast('Failed to restore pass. Event may be full.', false);
+  const TABS = [
+    ['bookings','Ticket Inventory'], 
+    ['pathfinder', 'AI Pathfinder 🤖'],
+    ['certificates','My Certificates'],
+    ['quest', 'Nexus Quest 🎮'],
+    ['refunds', 'Refund Tracker'],
+    ['transactions','Purchase History'],
+    ['rewards','Rewards Center'],
+    ['waitlist','Waitlist Queue'], 
+    ['notifications','System Inbox'], 
+    ['support','AI Intel Hub']
+  ];
+
+  const REWARDS = [
+    { id: 'R1', name: 'Premium Lunch Coupon', cost: 200, icon: '🍔' },
+    { id: 'R2', name: 'VIP Front Row Seat', cost: 500, icon: '🌟' },
+    { id: 'R3', name: 'Technical Workshop Pass', cost: 350, icon: '💻' },
+    { id: 'R4', name: 'Fest Goodies Kit', cost: 1000, icon: '🎁' }
+  ];
+
+  const handleRedeem = (reward) => {
+    if ((user?.coins || 0) < reward.cost) {
+        showToast(`Insufficient coins! You need ${reward.cost - (user?.coins || 0)} more.`, false);
+        return;
     }
-  };
-
-  const [reviewForm, setReviewForm] = useState({ bookingId: null, rating: 5, review: '' });
-
-  const handleAddReview = async () => {
-    try {
-      await api.booking.put(`/${reviewForm.bookingId}/review`, { rating: reviewForm.rating, review: reviewForm.review });
-      setBookings(prev => prev.map(b => b.id === reviewForm.bookingId ? { ...b, rating: reviewForm.rating, review: reviewForm.review } : b));
-      setReviewForm({ bookingId: null, rating: 5, review: '' });
-      showToast('Thank you for your feedback!');
-    } catch {
-      showToast('Failed to submit review.', false);
-    }
-  };
-
-  const generateCertificate = (user, event) => {
-    import('jspdf').then(jspdf => {
-      const doc = new jspdf.jsPDF('landscape');
-      doc.setFillColor(11, 14, 23);
-      doc.rect(0, 0, 297, 210, 'F');
-      
-      doc.setDrawColor(139, 92, 246);
-      doc.setLineWidth(2);
-      doc.rect(10, 10, 277, 190);
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(36);
-      doc.text("CERTIFICATE OF PARTICIPATION", 148, 60, null, null, "center");
-      
-      doc.setFontSize(14);
-      doc.setTextColor(150, 150, 150);
-      doc.text("THIS PROUDLY CERTIFIES THAT", 148, 90, null, null, "center");
-      
-      doc.setFontSize(28);
-      doc.setTextColor(255, 255, 255);
-      doc.text(user.name.toUpperCase(), 148, 110, null, null, "center");
-      
-      doc.setFontSize(14);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Has successfully participated in the event:`, 148, 140, null, null, "center");
-      
-      doc.setFontSize(24);
-      doc.setTextColor(139, 92, 246);
-      doc.text(event.eventName, 148, 160, null, null, "center");
-
-      // Generate QR Code with Verifiable Data
-      const qrData = JSON.stringify({
-        name: user.name,
-        email: user.email,
-        event: event.eventName,
-        issued: new Date().toISOString().split('T')[0]
-      });
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
-      
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.onload = () => {
-        doc.addImage(img, 'PNG', 230, 150, 40, 40);
-        
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text("SCAN TO VERIFY", 250, 195, null, null, "center");
-
-        doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
-      };
-      img.onerror = () => {
-        // Fallback if QR fails to load
-        doc.save(`${event.eventName.replace(/\s+/g,'_')}_Certificate.pdf`);
-      };
-      img.src = qrUrl;
+    showModal('Redeem Reward?', `Exchange ${reward.cost} coins for ${reward.name}?`, async () => {
+        closeModal();
+        try {
+            showToast(`Redemption Successful! Code: NEXUS-${Math.random().toString(36).substr(2,9).toUpperCase()}`);
+        } catch { showToast('Redemption failed.', false); }
     });
   };
-
-  const activeBookings    = bookings.filter(b => b.status !== 'CANCELLED' && b.status !== 'REFUNDED');
-  const cancelledBookings = bookings.filter(b => b.status === 'CANCELLED' || b.status === 'REFUNDED');
-
-  if (!user) return (
-    <div className="app-container" style={{ textAlign: 'center', padding: '10rem' }}>
-      <h2>Access Denied</h2>
-      <button className="btn-primary" onClick={() => navigate('/login')} style={{ marginTop: '2rem' }}>Go to Login</button>
-    </div>
-  );
-
-  const TABS = [['bookings','Ticket Inventory'], ['refunds','Refund Tracker'], ['certificates','E-Certificates'], ['rewards','Rewards Center'], ['notifications','Inbox'], ['support','Live Support']];
 
   return (
-    <div className="app-container page-transition" style={{ minHeight: '100vh' }}>
-      <Modal {...modal} onCancel={closeModal} confirmLabel="YES, CANCEL" />
-
-      {/* Ticket Viewer */}
-      {ticketView && (
-        <TicketModal booking={ticketView.booking} event={ticketView.event} user={user} onClose={() => setTicketView(null)} />
-      )}
-
-      {/* Toast */}
+    <div className="app-container page-transition" style={{ minHeight: '100vh', paddingBottom: '5rem' }}>
+      <Modal {...modal} onCancel={closeModal} confirmLabel="PROCEED" />
+      {ticketView && <TicketModal booking={ticketView.booking} event={ticketView.event} user={user} onClose={() => setTicketView(null)} />}
+      {certView && <CertificateModal show={true} booking={certView.booking} event={certView.event} user={user} onClose={() => setCertView(null)} />}
+      
       {toast.show && (
-        <div className="bounce-in" style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: 5000, padding: '1rem 2.5rem', background: toast.ok ? 'var(--primary)' : 'var(--accent)', borderRadius: '2rem', fontWeight: 900, whiteSpace: 'nowrap', boxShadow: '0 0 30px var(--primary-bright)' }}>
+        <div className="bounce-in" style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: 5000, padding: '1rem 2.5rem', background: toast.ok ? 'var(--primary)' : 'var(--accent)', borderRadius: '2rem', fontWeight: 900, boxShadow: '0 0 30px var(--primary-bright)' }}>
           {toast.message}
         </div>
       )}
 
-      {/* Countdown Header */}
-      <div className="glass-panel" style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))', padding: '2.5rem', marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Header */}
+      <div className="glass-panel" style={{ padding: '3rem', marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, var(--primary), var(--secondary))' }}>
         <div>
-          <div style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 900, letterSpacing: '2px', marginBottom: '0.4rem' }}>{countdown.target || 'NEXT EVENT COUNTDOWN'}</div>
-          <div style={{ fontSize: '2.8rem', fontWeight: 950, letterSpacing: '-1px' }}>{countdown.text}</div>
+          <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 950 }}>User Portal</h1>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem', marginTop: '0.5rem' }}>Manage your event participation and support requests.</p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.6rem', opacity: 0.6, letterSpacing: '2px' }}>PARTICIPANT</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{user.name}</div>
-          <div style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '0.2rem' }}>{user.email}</div>
+          {countdown.target && (
+            <div style={{ marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.8rem 1.2rem', borderRadius: '12px', textAlign: 'left' }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, opacity: 0.6, letterSpacing: '1px' }}>NEXT MISSION IN:</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 950, color: 'white' }}>{countdown.text}</div>
+              <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>Target: {countdown.target}</div>
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+              <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{user?.name}</div>
+                  <div style={{ opacity: 0.6, fontSize: '0.8rem' }}>{user?.email}</div>
+              </div>
+              <button onClick={() => setActiveTab('rewards')} style={{ background: 'rgba(251,191,36,0.1)', border: '2px solid #fbbf24', padding: '0.8rem 1.2rem', borderRadius: '1rem', cursor: 'pointer', transition: '0.3s' }}>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#fbbf24', letterSpacing: '1px' }}>{user?.coins || 0} COINS</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white' }}>REDEEM ➔</div>
+              </button>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
-        {TABS.map(([id, label]) => (
-          <button key={id} onClick={() => setActiveTab(id)}
-            style={{ background: activeTab === id ? 'var(--primary)' : 'transparent', border: `1px solid ${activeTab === id ? 'var(--primary-bright)' : 'var(--glass-border)'}`, boxShadow: activeTab === id ? '0 0 25px var(--primary-bright)' : 'none', color: 'white', padding: '0.8rem 2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 900, fontSize: '0.8rem', transition: '0.3s' }}>
-            {label}
-          </button>
-        ))}
+      <div className="nav-sticky" style={{ marginBottom: '3rem' }}>
+        <div className="app-container" style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+          gap: '1rem', 
+          justifyContent: 'center' 
+        }}>
+          {TABS.map(([id, label]) => (
+            <button key={id} onClick={(e) => { 
+                e.stopPropagation();
+                console.log("[Portal UI]: Tab ->", id); 
+                setActiveTab(id); 
+              }}
+              style={{ 
+                background: activeTab === id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', 
+                border: `2px solid ${activeTab === id ? 'var(--primary)' : 'var(--glass-border)'}`, 
+                color: 'white', padding: '1rem', borderRadius: '16px', cursor: 'pointer', 
+                fontWeight: 900, fontSize: '0.8rem', transition: '0.3s', pointerEvents: 'auto',
+                boxShadow: activeTab === id ? '0 10px 20px rgba(139,92,246,0.2)' : 'none'
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="glass-panel" style={{ minHeight: '550px', padding: '3rem' }}>
-
-        {/* ── TICKET INVENTORY ── */}
+      <div className="glass-panel" style={{ minHeight: '600px', padding: '3rem' }}>
+        
+        {/* 🎫 TICKET INVENTORY */}
         {activeTab === 'bookings' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '2rem' }}>Active Credentials</h2>
-            {activeBookings.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                {activeBookings.map(b => {
-                  const ev = allEvents.find(e => e.id === b.eventId);
-                  return (
-                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', flexWrap: 'wrap', gap: '1rem' }}>
-                      <div>
-                        <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Archived Event`}</div>
-                        <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.3rem' }}>TF-{b.id} • {ev?.venue || 'Venue TBD'} • ₹{b.totalAmount}</div>
-                        <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CONFIRMED'} /></div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                        <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
-                          style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(139,92,246,0.15)', border: '1px solid var(--primary)' }}>
-                          🎟 VIEW PASS
-                        </button>
-                        <button className="btn-elite" onClick={() => handleCancelBooking(b)}
-                          style={{ background: 'var(--accent)', border: 'none', fontSize: '0.75rem', padding: '0.6rem 1.4rem' }}>
-                          CANCEL
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : isLoaded ? (
-              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>
-                No active credentials. <span style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigate('/events')}>Browse Events →</span>
-              </div>
-            ) : <div style={{ opacity: 0.3, padding: '3rem', textAlign: 'center' }}>Syncing Credential Vault...</div>}
-          </div>
-        )}
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Active Passports</h2>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {bookings.map(b => {
+                const bEvId = b.eventId || b.event_id || b.event?.id;
+                const ev = allEvents.find(e => (e.id || e.eventId || '').toString() === (bEvId || '').toString()) || { eventName: 'Nexus Event', venue: 'Venue Pending' };
+                const s = (b.status || 'PENDING').toUpperCase();
+                
+                // 🚩 GATE STATUS CALCULATION
+                const isAdmitted = s === 'ADMITTED' || b.usedFlag;
+                const isRejected = s === 'REJECTED';
+                const gateStatus = isAdmitted ? 'ENTERED ✅' : isRejected ? 'ENTRY DENIED ❌' : 'PENDING ENTRY ⏳';
 
-        {/* ── REFUND TRACKER ── */}
-        {activeTab === 'refunds' && (
-          <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Refund & Cancellation Ledger</h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Track status of all cancelled entry passes and refund requests.</p>
-            {cancelledBookings.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                {cancelledBookings.map(b => {
-                  const ev = allEvents.find(e => e.id === b.eventId);
-                  return (
-                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(244,63,94,0.03)', borderLeft: b.status === 'REFUNDED' ? '4px solid #fbbf24' : '4px solid var(--accent)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--primary)' }}>{ev?.eventName || `Archived Event`}</div>
-                          <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.3rem' }}>TF-{b.id} • {ev?.venue || 'Venue TBD'} • ₹{b.totalAmount}</div>
-                          <div style={{ marginTop: '0.8rem' }}><StatusBadge status={b.status || 'CANCELLED'} /></div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                          <button className="btn-elite" onClick={() => ev && setTicketView({ booking: b, event: ev })}
-                            style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>
-                            🎟 VIEW VOIDED PASS
-                          </button>
-                          {b.status === 'CANCELLED' && (
-                            <button className="btn-elite" onClick={() => handleRestoreBooking(b)}
-                              style={{ fontSize: '0.75rem', padding: '0.6rem 1.4rem', background: '#10b981', color: 'white', border: 'none' }}>
-                              ↺ RESTORE PASS
-                            </button>
-                          )}
+                return (
+                  <div key={b.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(255,255,255,0.02)', borderLeft: `4px solid ${isAdmitted ? 'var(--success)' : isRejected ? 'var(--accent)' : 'var(--primary)'}` }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'center' }}>
+                      <div className="mobile-text-center">
+                        <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{ev.eventName}</div>
+                        <div style={{ opacity: 0.5, fontSize: '0.8rem', marginTop: '0.4rem' }}>ID: TF-{b.id} • Seats: {b.ticketsBooked} • Venue: {ev.venue}</div>
+                        <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                           <StatusBadge status={b.status} />
+                           <span style={{ fontSize: '0.7rem', fontWeight: 900, color: isAdmitted ? '#10b981' : isRejected ? '#f43f5e' : '#94a3b8', opacity: 0.8 }}>● {gateStatus}</span>
                         </div>
                       </div>
-                      <div style={{ marginTop: '1.5rem', padding: '1rem 1.2rem', background: b.status === 'REFUNDED' ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', border: b.status === 'REFUNDED' ? '1px dashed rgba(251,191,36,0.3)' : '1px dashed var(--glass-border)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span style={{ fontSize: '1.5rem' }}>{b.status === 'REFUNDED' ? '💰' : '⏳'}</span>
-                        <div>
-                          <div style={{ fontWeight: 900, color: b.status === 'REFUNDED' ? '#fbbf24' : 'var(--text-main)', fontSize: '0.85rem' }}>REFUND STATUS: {b.status === 'REFUNDED' ? 'COMPLETED' : 'PROCESSING'}</div>
-                          <div style={{ opacity: 0.5, fontSize: '0.72rem', marginTop: '0.2rem' }}>
-                            {b.status === 'REFUNDED' ? `₹${b.totalAmount} has been successfully credited back to your account.` : `Refund of ₹${b.totalAmount} is processing. It will be credited within 5–7 business days.`}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No cancelled bookings. All your credentials are active.</div>
-            )}
-          </div>
-        )}
+                      <div className="flex-stack-mobile" style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 9999 }}>
+                        <button className="btn-elite" onClick={(e) => { 
+                            e.stopPropagation();
+                            console.log("[Portal Action]: Open Pass for TF-" + b.id); 
+                            setTicketView({ booking: b, event: ev }); 
+                          }} style={{ background: 'var(--primary)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>OPEN PASS</button>
+                        
+                        {isAdmitted && (
+                          <button className="btn-elite" onClick={(e) => { 
+                              e.stopPropagation();
+                              setCertView({ booking: b, event: ev });
+                            }} style={{ background: 'linear-gradient(45deg, #8b5cf6, #ec4899)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>🎓 GET CERTIFICATE</button>
+                        )}
 
-        {/* ── E-CERTIFICATES ── */}
-        {activeTab === 'certificates' && (
-          <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>E-Certificates</h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Download certificates for events you have successfully attended.</p>
-            {activeBookings.filter(b => {
-              const ev = allEvents.find(e => e.id === b.eventId);
-              return ev?.dateTime && new Date(ev.dateTime) < new Date();
-            }).length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {activeBookings.map(b => {
-                  const ev = allEvents.find(e => e.id === b.eventId);
-                  if (!ev?.dateTime || new Date(ev.dateTime) >= new Date()) return null;
-                  return (
-                    <div key={b.id} className="glass-panel" style={{ padding: '2rem', textAlign: 'center', background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.3)' }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
-                      <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.5rem' }}>{ev.eventName}</div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '1.5rem' }}>Conducted on: {new Date(ev.dateTime).toLocaleDateString()}</div>
-                      
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                        <button className="btn-primary" onClick={() => generateCertificate(user, ev)} style={{ flex: 1, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#000', fontSize: '0.7rem', padding: '0.6rem' }}>
-                          ⬇ CERTIFICATE
-                        </button>
-                        {!b.rating ? (
-                          <button className="btn-elite" onClick={() => setReviewForm({ ...reviewForm, bookingId: b.id })} style={{ flex: 1, fontSize: '0.7rem', padding: '0.6rem' }}>
-                            ⭐ RATE EVENT
-                          </button>
-                        ) : (
-                          <div style={{ flex: 1, fontSize: '0.75rem', color: '#fbbf24', fontWeight: 900 }}>⭐ {b.rating}/5</div>
+                        {(s === 'CONFIRMED' || s === 'PENDING') && (
+                          <button className="btn-elite" onClick={(e) => { 
+                              e.stopPropagation();
+                              console.log("[Portal Action]: Cancel Request for TF-" + b.id);
+                              handleRequestRefund(b); 
+                            }} style={{ background: 'var(--accent)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>CANCEL PASS</button>
                         )}
                       </div>
-
-                      {reviewForm.bookingId === b.id && (
-                        <div className="page-transition" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.8rem' }}>
-                            {[1,2,3,4,5].map(s => <span key={s} onClick={() => setReviewForm({...reviewForm, rating: s})} style={{ cursor: 'pointer', fontSize: '1.2rem', filter: reviewForm.rating >= s ? 'none' : 'grayscale(1)' }}>⭐</span>)}
-                          </div>
-                          <textarea placeholder="Write a quick review..." className="form-control" style={{ fontSize: '0.75rem', height: '60px', marginBottom: '0.8rem' }} value={reviewForm.review} onChange={e => setReviewForm({...reviewForm, review: e.target.value})} />
-                          <button className="btn-primary" onClick={handleAddReview} style={{ width: '100%', fontSize: '0.7rem', padding: '0.5rem' }}>SUBMIT</button>
-                        </div>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No completed events yet. Attend an event to earn a certificate!</div>
-            )}
+                  </div>
+                );
+              })}
+              {isLoaded && bookings.length === 0 && (
+                <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>
+                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎟️</div>
+                   No active passports detected.
+                   <div style={{ marginTop: '1rem', fontSize: '0.7rem' }}>
+                      System Sync: {bookings.length} total records found. 
+                      ({bookings.filter(b => (b.status||'').toUpperCase() === 'PENDING').length} Pending)
+                   </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ── REWARDS CENTER ── */}
+        {/* 🎓 MY CERTIFICATES */}
+        {activeTab === 'certificates' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Merit Certificates</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {bookings.filter(b => (b.status || '').toUpperCase() === 'ADMITTED').map(b => {
+                const ev = allEvents.find(e => e.id.toString() === b.eventId.toString());
+                return (
+                  <div key={b.id} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(139,92,246,0.05)', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📜</div>
+                            <div style={{ fontWeight: 900, marginBottom: '0.5rem' }}>{ev?.eventName || 'Technical Event'}</div>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.5, marginBottom: '1rem' }}>ID: TF-GEN-{b.id}</div>
+                        </div>
+                        {(!b.rating) && (
+                            <button className="btn-elite" onClick={() => {
+                                const rating = prompt("Rate this event (1-5):", "5");
+                                const review = prompt("Write a short review:");
+                                if (rating) {
+                                    api.booking.post(`/${b.id}/review`, { rating: parseInt(rating), review }).then(() => {
+                                        showToast("Thank you for your feedback!");
+                                        fetchAll();
+                                    });
+                                }
+                            }} style={{ padding: '0.5rem 1rem', fontSize: '0.6rem', background: 'var(--accent)' }}>RATE EVENT</button>
+                        )}
+                        {b.rating && <div style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 900 }}>⭐ {b.rating}/5</div>}
+                    </div>
+                    <button className="btn-primary" onClick={() => setCertView({ booking: b, event: ev })} style={{ fontSize: '0.8rem', width: '100%', marginTop: '1rem' }}>VIEW MERIT</button>
+                  </div>
+                );
+              })}
+              {isLoaded && !bookings.some(b => (b.status || '').toUpperCase() === 'ADMITTED') && (
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', opacity: 0.3, padding: '5rem' }}>Certificates unlock after gate admission.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 📊 REFUND TRACKER */}
+        {activeTab === 'refunds' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Refund Management</h2>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {bookings.filter(b => b.status === 'CANCELLED' || b.status === 'REFUNDED' || b.refundStatus).map(b => {
+                const ev = allEvents.find(e => (e.id || e.eventId || '').toString() === (b.eventId || '').toString()) || { eventName: 'Nexus Event' };
+                return (
+                  <div key={b.id} className="glass-panel" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.5, fontWeight: 900, letterSpacing: '1px' }}>TICKET TF-{b.id}</div>
+                      <div style={{ fontWeight: 800, fontSize: '1.1rem', margin: '0.4rem 0' }}>{ev.eventName}</div>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 900 }}>REFUND: ₹{b.totalAmount}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                       <div style={{ fontSize: '0.6rem', opacity: 0.4, marginBottom: '0.4rem' }}>CURRENT STATUS</div>
+                       <RefundBadge status={b.refundStatus || 'REQUESTED'} />
+                    </div>
+                  </div>
+                );
+              })}
+              {isLoaded && !bookings.filter(b => b.status === 'CANCELLED' || b.status === 'REFUNDED' || b.refundStatus).length && (
+                <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💸</div>
+                  No active refund requests found.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 📊 TRANSACTIONS */}
+        {activeTab === 'transactions' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Purchase History</h2>
+            <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead style={{ background: 'rgba(255,255,255,0.03)', fontSize: '0.7rem', fontWeight: 900 }}>
+                  <tr>
+                    <th style={{ padding: '1.2rem' }}>TRANSACTION ID</th>
+                    <th style={{ padding: '1.2rem' }}>EVENT</th>
+                    <th style={{ padding: '1.2rem' }}>DATE</th>
+                    <th style={{ padding: '1.2rem' }}>AMOUNT</th>
+                    <th style={{ padding: '1.2rem' }}>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: '0.85rem' }}>
+                  {bookings.map(b => (
+                    <tr key={b.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                      <td style={{ padding: '1.2rem', fontWeight: 'mono' }}>TXN-{b.id}</td>
+                      <td style={{ padding: '1.2rem' }}>{allEvents.find(e => e.id.toString() === b.eventId.toString())?.eventName || 'Fest Booking'}</td>
+                      <td style={{ padding: '1.2rem', opacity: 0.5 }}>{new Date().toLocaleDateString()}</td>
+                      <td style={{ padding: '1.2rem', fontWeight: 900 }}>₹{b.totalAmount}</td>
+                      <td style={{ padding: '1.2rem' }}><StatusBadge status={b.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {isLoaded && !bookings.length && <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.3 }}>No transactions logged.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* 🎁 REWARDS CENTER */}
         {activeTab === 'rewards' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Rewards Center</h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: '2.5rem' }}>Redeem your Fest Coins for exclusive perks and discounts.</p>
-            
-            <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))', marginBottom: '3rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 900, opacity: 0.6, letterSpacing: '2px', marginBottom: '0.5rem' }}>YOUR BALANCE</div>
-              <div style={{ fontSize: '4rem', fontWeight: 950, color: '#fbbf24', textShadow: '0 0 20px rgba(251,191,36,0.4)' }}>
-                🪙 {user?.coins || 0}
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {[
-                { title: 'VIP Front Row Pass', cost: 500, icon: '🌟', desc: 'Get guaranteed front row seating at any major event.' },
-                { title: 'Free Food Coupon', cost: 200, icon: '🍔', desc: 'Valid at any official food stall during the fest.' },
-                { title: 'Exclusive Fest T-Shirt', cost: 1000, icon: '👕', desc: 'Limited edition Technical Fest merchandise.' },
-              ].map(r => (
-                <div key={r.title} className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{r.icon}</div>
-                  <h3 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>{r.title}</h3>
-                  <p style={{ fontSize: '0.8rem', opacity: 0.6, flex: 1 }}>{r.desc}</p>
-                  <button className="btn-elite" onClick={() => showToast('Feature coming soon in V2! Keep earning coins.', true)}
-                    style={{ marginTop: '1.5rem', background: (user?.coins || 0) >= r.cost ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: (user?.coins || 0) >= r.cost ? 'white' : 'var(--text-dim)', border: 'none', width: '100%' }}>
-                    REDEEM ({r.cost} COINS)
-                  </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                <h2 className="gradient-text" style={{ margin: 0 }}>Nexus Rewards</h2>
+                <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid #fbbf24', padding: '0.6rem 1.2rem', borderRadius: '2rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '1.2rem' }}>🪙</span>
+                    <span style={{ color: '#fbbf24', fontWeight: 900 }}>{user.coins || 0} BALANCE</span>
                 </div>
-              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
+                {REWARDS.map(r => (
+                    <div key={r.id} className="glass-panel" style={{ padding: '2rem', textAlign: 'center', border: '1px solid var(--glass-border)', transition: '0.3s' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{r.icon}</div>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{r.name}</h3>
+                        <p style={{ opacity: 0.5, fontSize: '0.8rem', marginBottom: '1.5rem' }}>Redeem for specialized fest access.</p>
+                        <button className="btn-elite" onClick={() => handleRedeem(r)} style={{ width: '100%', background: (user.coins||0) >= r.cost ? 'var(--primary)' : 'rgba(255,255,255,0.05)' }}>
+                            {r.cost} COINS
+                        </button>
+                    </div>
+                ))}
             </div>
           </div>
         )}
 
-        {/* ── INBOX ── */}
-        {activeTab === 'notifications' && (
-          <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '2rem' }}>System Inbox</h2>
-            {notifications.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {notifications.map(n => (
-                  <div key={n.id} className="glass-panel" style={{ padding: '1.5rem', borderLeft: n.read ? 'none' : '4px solid var(--vivid-pink)', background: n.read ? 'transparent' : 'rgba(139,92,246,0.04)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', opacity: 0.4, marginBottom: '0.6rem' }}>
-                      <span>#{n.id}</span><span>{new Date(n.timestamp).toLocaleString()}</span>
-                    </div>
-                    <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{n.message}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>Inbox is clear.</div>
-            )}
-          </div>
-        )}
-
-        {/* ── LIVE SUPPORT ── */}
+        {/* 🎧 SUPPORT CHAT */}
         {activeTab === 'support' && (
           <div className="page-transition">
-            <h2 className="gradient-text" style={{ marginBottom: '0.5rem' }}>Live Support Hub</h2>
-            <p style={{ color: 'var(--text-dim)', marginBottom: '2rem', fontSize: '0.85rem' }}>Connect directly with festival management for refund escalations or booking issues.</p>
+            <h2 className="gradient-text" style={{ marginBottom: '1.5rem' }}>Live Support</h2>
+            <p style={{ opacity: 0.6, marginBottom: '2rem', fontSize: '0.9rem' }}>Contact our team for any assistance with bookings or platform features.</p>
             <ChatPanel user={user} />
           </div>
         )}
+
+        {/* ⏳ WAITLIST */}
+        {activeTab === 'waitlist' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Waitlist Queue</h2>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {waitlistEntries.map(w => {
+                const ev = allEvents.find(e => e.id.toString() === w.eventId.toString());
+                return (
+                  <div key={w.id} className="glass-panel" style={{ padding: '2rem', background: 'rgba(139,92,246,0.03)', borderLeft: '4px solid var(--primary)' }}>
+                    <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{ev?.eventName || 'Event'}</div>
+                    <div style={{ opacity: 0.5, fontSize: '0.8rem', marginTop: '0.4rem' }}>Joined: {new Date(w.joinedAt).toLocaleDateString()} • Position: #{w.position}</div>
+                    <div style={{ marginTop: '1rem' }}><span style={{ color: 'var(--primary)', fontWeight: 900 }}>{w.status}</span></div>
+                  </div>
+                );
+              })}
+              {isLoaded && !waitlistEntries.length && (
+                <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>You are not in any waitlists.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 📥 NOTIFICATIONS */}
+        {activeTab === 'notifications' && (
+          <div className="page-transition">
+            <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>System Inbox</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {notifications.map(n => (
+                <div key={n.id} className="glass-panel" style={{ padding: '1.5rem', background: n.read ? 'transparent' : 'rgba(139,92,246,0.05)' }}>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.4, marginBottom: '0.5rem' }}>{new Date(n.timestamp).toLocaleString()}</div>
+                  <div style={{ fontSize: '0.95rem' }}>{n.message}</div>
+                </div>
+              ))}
+              {isLoaded && !notifications.length && (
+                <div style={{ textAlign: 'center', opacity: 0.3, padding: '5rem' }}>Your inbox is empty.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 🎮 NEXUS QUEST */}
+        {activeTab === 'quest' && (
+          <div className="page-transition">
+            <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+              <h2 className="gradient-text" style={{ fontSize: '2.5rem' }}>Nexus Quest Terminal</h2>
+              <p style={{ opacity: 0.6 }}>Found a physical QR code at the venue? Enter the code below to claim your XP!</p>
+            </div>
+            
+            <div className="glass-panel" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '2rem' }}>📡</div>
+              <input 
+                id="questInput"
+                className="form-control" 
+                placeholder="ENTER QUEST CODE (e.g. S-NEXUS-01)" 
+                style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: '2rem', textTransform: 'uppercase' }}
+              />
+              <button className="btn-primary" style={{ width: '100%', padding: '1.2rem' }} onClick={async () => {
+                const code = document.getElementById('questInput').value;
+                if (!code) return;
+                try {
+                  await api.user.post(`/${user.id}/quest`, { questCode: code });
+                  showToast("QUEST REDEEMED! Check your notifications.");
+                  fetchAll();
+                  document.getElementById('questInput').value = '';
+                } catch (err) {
+                  showToast(err.response?.data || "Redemption failed.", false);
+                }
+              }}>CLAIM REWARD</button>
+              
+              <div style={{ marginTop: '3rem', padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 900, marginBottom: '1rem', opacity: 0.5 }}>ACTIVE MISSIONS</div>
+                <div style={{ display: 'grid', gap: '0.8rem' }}>
+                  <div style={{ fontSize: '0.85rem' }}>🔹 Scan QR at Sponsor Booths (Code starts with S-)</div>
+                  <div style={{ fontSize: '0.85rem' }}>🔹 Attend Masterclasses (Code starts with M-)</div>
+                  <div style={{ fontSize: '0.85rem' }}>🔹 Social Media Share (Code: NEXUS-SHARE-2026)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🤖 AI PATHFINDER */}
+        {activeTab === 'pathfinder' && (
+          <div className="page-transition">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+              <div>
+                <h2 className="gradient-text" style={{ fontSize: '2.5rem' }}>AI Pathfinder</h2>
+                <p style={{ opacity: 0.6 }}>Our neural network has synthesized your ideal Technical Fest itinerary.</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>SYNTHESIS STATUS</div>
+                <div style={{ color: 'var(--success)', fontWeight: 900 }}>OPTIMIZED ✅</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '3rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {allEvents
+                  .filter(e => {
+                    // Smart Recommendation Logic
+                    const isBooked = bookings.some(b => b.eventId?.toString() === e.id?.toString());
+                    if (isBooked) return false;
+                    const isSameDept = (e.department || '').toUpperCase() === (user.department || '').toUpperCase();
+                    const isUpcoming = new Date(e.dateTime).getTime() > Date.now();
+                    return isUpcoming && isSameDept;
+                  })
+                  .slice(0, 3)
+                  .map((e, idx) => (
+                    <div key={e.id} className="glass-panel bounce-in" style={{ padding: '2rem', display: 'flex', gap: '2rem', animationDelay: `${idx * 0.1}s` }}>
+                       <div style={{ fontSize: '2.5rem' }}>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</div>
+                       <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--primary-bright)', fontWeight: 900 }}>RECOMMENDED MISSION</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 950, margin: '0.3rem 0' }}>{e.eventName}</div>
+                          <div style={{ opacity: 0.5, fontSize: '0.85rem' }}>{e.venue} • {new Date(e.dateTime).toLocaleString()}</div>
+                          <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '0.3rem 0.8rem', background: 'rgba(139,92,246,0.1)', borderRadius: '4px', color: 'var(--primary-bright)', fontWeight: 900 }}>MATCH: 98%</span>
+                            <span style={{ fontSize: '0.7rem', padding: '0.3rem 0.8rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', opacity: 0.6 }}>{e.department}</span>
+                          </div>
+                       </div>
+                       <button className="btn-primary" onClick={() => navigate(`/book/${e.id}`)} style={{ height: 'fit-content' }}>ENROLL</button>
+                    </div>
+                  ))
+                }
+                {allEvents.filter(e => (e.department||'').toUpperCase() === (user.department||'').toUpperCase()).length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.3 }}>Pathfinder scanning registry... No department matches found.</div>
+                )}
+              </div>
+
+              <div className="glass-panel" style={{ padding: '2rem', height: 'fit-content' }}>
+                <h3 style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>WHY THESE?</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: '0.8rem', color: 'var(--primary)' }}>DEPT ALIGNMENT</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.3rem' }}>Events matching your {user.department} specialization.</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: '0.8rem', color: 'var(--secondary)' }}>TEMPORAL SYNC</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.3rem' }}>No time conflicts with your existing {bookings.length} passes.</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: '0.8rem', color: '#fbbf24' }}>COIN POTENTIAL</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.3rem' }}>High-value events with maximum participation rewards.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

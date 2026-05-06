@@ -17,6 +17,8 @@ public class User {
     private String department;
     private String college;
     private Integer coins;
+    private String tier = "ROOKIE"; // ROOKIE, PRO, ELITE, LEGEND
+    private String usedQuests = ""; // CSV of redeemed quest codes
 
     public User() {
     }
@@ -29,6 +31,8 @@ public class User {
         this.department = department;
         this.college = college;
         this.coins = 100; // Welcome bonus
+        this.tier = "ROOKIE";
+        this.usedQuests = "";
     }
 
     public Long getId() { return id; }
@@ -54,4 +58,10 @@ public class User {
 
     public Integer getCoins() { return coins; }
     public void setCoins(Integer coins) { this.coins = coins; }
+
+    public String getTier() { return tier; }
+    public void setTier(String tier) { this.tier = tier; }
+
+    public String getUsedQuests() { return usedQuests; }
+    public void setUsedQuests(String usedQuests) { this.usedQuests = usedQuests; }
 }

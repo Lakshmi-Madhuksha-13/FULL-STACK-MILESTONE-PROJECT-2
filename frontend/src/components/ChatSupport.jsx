@@ -6,6 +6,7 @@ const ChatSupport = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [user, setUser] = useState(null);
+    const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef();
 
     useEffect(() => {
@@ -24,95 +25,198 @@ const ChatSupport = () => {
     }, [user, isOpen]);
 
     useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [messages]);
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [messages, isTyping]);
 
     const fetchMessages = async () => {
+        if (!user || !isOpen) return;
         try {
             const res = await api.support.get(`/history/${user.id}`);
-            setMessages(Array.isArray(res.data) ? res.data : []);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setMessages(prev => {
+                if (data.length === prev.length && data[data.length-1]?.id === prev[prev.length-1]?.id) return prev;
+                return data;
+            });
         } catch (e) {}
     };
 
-    const handleSend = async () => {
-        if (!input.trim()) return;
-        const msg = { userId: user.id, senderName: user.name, message: input, type: 'USER' };
-        await api.support.post('/send', msg);
-        setInput('');
-        fetchMessages();
+    const handleSend = async (customMsg = null) => {
+        const text = customMsg || input;
+        if (!text.trim() || !user) return;
+        
+        const msg = { userId: user.id, senderName: user.name, message: text, type: 'USER' };
+        setMessages(prev => [...prev, msg]);
+        if (!customMsg) setInput('');
+        
+        try {
+            await api.support.post('/send', msg);
+            setIsTyping(true);
+            
+            setTimeout(async () => {
+                let aiReply = "";
+                const lower = text.toLowerCase();
+                
+                if (lower.includes("hello") || lower.includes("hi")) aiReply = `Hi ${user.name}! I'm your Nexus Guide. How can I help you today?`;
+                else if (lower.includes("coin")) aiReply = "You earn coins by booking events and participating. Check your profile for the balance!";
+                else if (lower.includes("ticket")) aiReply = "Your tickets are in the 'My Tickets' section. You can download the QR there.";
+                else if (lower.includes("refund")) aiReply = "Refunds take 5-7 business days to process to your original payment method.";
+                else aiReply = "I've noted that down. A support specialist will jump in if I can't solve it!";
+
+                const aiMsg = { userId: user.id, senderName: 'Nexus Guide', message: aiReply, type: 'ADMIN' };
+                await api.support.post('/send', aiMsg);
+                setIsTyping(false);
+                setTimeout(fetchMessages, 500);
+            }, 1200);
+        } catch (e) {}
     };
 
     if (!user) return null;
 
     return (
-        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '5000' }}>
-            <div className={`pop-chat-container ${isOpen ? 'active' : ''}`}>
-                <div className="pop-chat-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                        <div className="status-pulse"></div>
-                        <div><strong style={{fontSize: '0.9rem'}}>HEAL INTEL HUB</strong><br/><small style={{opacity: 0.5, fontSize: '0.6rem'}}>OFFICIAL SUPPORT</small></div>
-                    </div>
-                    <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
-                </div>
-                
-                <div className="pop-chat-body" ref={scrollRef}>
-                    <div className="intel-intro">Syncing with Technical Command...</div>
-                    {messages.map((m, i) => (
-                        <div key={i} className={`msg-bubble ${m.type === 'USER' ? 'user' : 'support'}`}>
-                            {m.message}
-                            <div className="msg-time">{m.type === 'USER' ? 'You' : 'Management'}</div>
+        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '9999' }}>
+            <div className={`chat-super-app ${isOpen ? 'active' : ''}`}>
+                {/* 🏷️ HEADER */}
+                <div className="chat-super-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div className="avatar-pulse">
+                            <img src="https://ui-avatars.com/api/?name=Nexus+Guide&background=8b5cf6&color=fff" alt="AI" />
+                            <div className="online-dot"></div>
                         </div>
+                        <div>
+                            <div style={{ fontWeight: 900, fontSize: '0.95rem' }}>Nexus Support</div>
+                            <div style={{ fontSize: '0.65rem', opacity: 0.6, fontWeight: 700 }}>Online • Replies in seconds</div>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsOpen(false)} className="close-btn">✕</button>
+                </div>
+
+                {/* 💬 BODY */}
+                <div className="chat-super-body" ref={scrollRef}>
+                    <div className="chat-date">TODAY</div>
+                    <div className="msg-row support">
+                        <div className="bubble">Hi {user.name}! 👋 Welcome to Nexus Support. How can we help you today?</div>
+                    </div>
+
+                    {messages.map((m, i) => (
+                        <div key={i} className={`msg-row ${m.type === 'USER' ? 'user' : 'support'}`}>
+                            <div className="bubble">{m.message}</div>
+                        </div>
+                    ))}
+
+                    {isTyping && (
+                        <div className="msg-row support">
+                            <div className="bubble typing">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ⚡ QUICK ACTIONS */}
+                <div className="quick-actions">
+                    {['Track Ticket', 'Refund Policy', 'Earn Coins'].map(q => (
+                        <button key={q} onClick={() => handleSend(q)} className="action-chip">{q}</button>
                     ))}
                 </div>
 
-                <div className="pop-chat-footer">
+                {/* ⌨️ FOOTER */}
+                <div className="chat-super-footer">
                     <input 
-                        type="text" placeholder="Mission inquiry..." 
+                        type="text" placeholder="Type a message..." 
                         value={input} onChange={(e) => setInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                     />
-                    <button onClick={handleSend}>➔</button>
+                    <button onClick={() => handleSend()} disabled={!input.trim()} className="send-btn">➔</button>
                 </div>
             </div>
 
+            {/* 🔘 FAB */}
             {!isOpen && (
-                <button className="chat-launcher-pulse" onClick={() => setIsOpen(true)}>
-                    <span>💬</span>
-                    <div className="pulse-ring"></div>
+                <button className="chat-fab-premium" onClick={() => setIsOpen(true)}>
+                    <div className="fab-icon">💬</div>
+                    <div className="fab-badge">1</div>
+                    <div className="fab-rings"></div>
                 </button>
             )}
 
             <style>{`
-                .pop-chat-container {
-                    width: 360px; height: 500px; background: #0b0e14; border: 1px solid var(--primary);
-                    border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.8);
-                    display: flex; flexDirection: column; overflow: hidden;
-                    transform: translateY(120%) scale(0.8); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0;
+                .chat-super-app {
+                    width: 380px; height: 600px; background: #ffffff; border-radius: 24px;
+                    display: flex; flex-direction: column; overflow: hidden;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+                    transform: translateY(20px) scale(0.95); opacity: 0; pointer-events: none;
+                    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 }
-                .pop-chat-container.active { transform: translateY(0) scale(1); opacity: 1; }
-                .pop-chat-header { background: rgba(139, 92, 246, 0.1); padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); }
-                .status-pulse { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
-                .pop-chat-body { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
-                .intel-intro { text-align: center; font-size: 0.65rem; opacity: 0.3; letter-spacing: 1px; margin-bottom: 1rem; }
-                .msg-bubble { padding: 0.8rem 1rem; border-radius: 12px; max-width: 80%; position: relative; font-size: 0.85rem; line-height: 1.4; }
-                .msg-bubble.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
-                .msg-bubble.support { align-self: flex-start; background: rgba(255,255,255,0.05); color: var(--text-main); border-bottom-left-radius: 2px; border: 1px solid var(--glass-border); }
-                .msg-time { font-size: 0.6rem; opacity: 0.4; margin-top: 0.4rem; font-weight: bold; }
-                .pop-chat-footer { padding: 1rem; display: flex; gap: 0.8rem; background: rgba(0,0,0,0.2); }
-                .pop-chat-footer input { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: white; padding: 0.6rem 1rem; font-size: 0.8rem; }
-                .pop-chat-footer button { width: 45px; height: 45px; background: var(--primary); border: none; border-radius: 10px; color: white; cursor: pointer; transition: 0.3s; }
-                .pop-chat-footer button:hover { transform: translateX(3px); box-shadow: 0 0 15px var(--primary); }
+                .chat-super-app.active { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
                 
-                .chat-launcher-pulse { 
-                    width: 65px; height: 65px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer;
-                    display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: white; position: relative;
+                /* HEADER */
+                .chat-super-header {
+                    background: #1a1a1a; color: white; padding: 1.5rem;
+                    display: flex; justify-content: space-between; align-items: center;
                 }
-                .pulse-ring { 
-                    position: absolute; width: 100%; height: 100%; border: 2px solid var(--primary); border-radius: 50%;
-                    animation: ringPulse 2s infinite; 
+                .avatar-pulse { position: relative; width: 40px; height: 40px; }
+                .avatar-pulse img { width: 100%; height: 100%; border-radius: 50%; border: 2px solid #8b5cf6; }
+                .online-dot { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #10b981; border-radius: 50%; border: 2px solid #1a1a1a; }
+                .close-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+
+                /* BODY */
+                .chat-super-body { flex: 1; overflow-y: auto; padding: 1.5rem; background: #f8f9fa; display: flex; flex-direction: column; gap: 1rem; }
+                .chat-date { text-align: center; font-size: 0.65rem; color: #999; font-weight: 800; letter-spacing: 1px; margin: 1rem 0; }
+                
+                .msg-row { display: flex; width: 100%; }
+                .msg-row.user { justify-content: flex-end; }
+                .msg-row.support { justify-content: flex-start; }
+                
+                .bubble {
+                    max-width: 80%; padding: 0.8rem 1.2rem; font-size: 0.85rem; line-height: 1.5; font-weight: 500;
+                    border-radius: 18px; position: relative;
                 }
-                @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-                @keyframes ringPulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+                .msg-row.user .bubble { background: #1a1a1a; color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+                .msg-row.support .bubble { background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+                /* TYPING */
+                .bubble.typing { display: flex; gap: 4px; padding: 1rem 1.2rem; }
+                .bubble.typing span { width: 6px; height: 6px; background: #8b5cf6; border-radius: 50%; animation: typing 1s infinite alternate; }
+                .bubble.typing span:nth-child(2) { animation-delay: 0.2s; }
+                .bubble.typing span:nth-child(3) { animation-delay: 0.4s; }
+                @keyframes typing { from { transform: translateY(0); opacity: 0.3; } to { transform: translateY(-5px); opacity: 1; } }
+
+                /* QUICK ACTIONS */
+                .quick-actions { padding: 0 1.5rem 1rem 1.5rem; background: #f8f9fa; display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; }
+                .action-chip { 
+                    white-space: nowrap; padding: 0.5rem 1rem; background: white; border: 1px solid #eee; 
+                    border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: #8b5cf6; cursor: pointer; transition: 0.2s;
+                }
+                .action-chip:hover { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+
+                /* FOOTER */
+                .chat-super-footer { padding: 1.2rem; background: white; border-top: 1px solid #eee; display: flex; gap: 1rem; }
+                .chat-super-footer input { flex: 1; border: none; background: #f1f3f5; padding: 0.8rem 1.2rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; }
+                .chat-super-footer input:focus { outline: 2px solid #8b5cf6; }
+                .send-btn { width: 45px; height: 45px; border-radius: 12px; border: none; background: #8b5cf6; color: white; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
+                .send-btn:hover { background: #1a1a1a; transform: rotate(-10deg) scale(1.1); }
+                .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+                /* FAB */
+                .chat-fab-premium {
+                    width: 70px; height: 70px; border-radius: 50%; background: #1a1a1a; border: none; cursor: pointer;
+                    position: relative; display: flex; align-items: center; justify-content: center;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: 0.3s;
+                }
+                .chat-fab-premium:hover { transform: translateY(-5px) rotate(5deg); box-shadow: 0 15px 40px rgba(0,0,0,0.4); }
+                .fab-icon { font-size: 1.8rem; color: white; }
+                .fab-badge { 
+                    position: absolute; top: 0; right: 0; background: #f43f5e; color: white; 
+                    width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; font-weight: 900;
+                    display: flex; align-items: center; justify-content: center; border: 3px solid #1a1a1a;
+                }
+                .fab-rings { position: absolute; inset: -5px; border: 2px solid #8b5cf6; border-radius: 50%; animation: fabRing 2s infinite; pointer-events: none; }
+                @keyframes fabRing { 0% { transform: scale(0.9); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
             `}</style>
         </div>
     );

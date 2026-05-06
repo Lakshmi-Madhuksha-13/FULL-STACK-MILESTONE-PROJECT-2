@@ -46,8 +46,8 @@ const EventsPage = () => {
 
   const filteredEvents = events.filter(e => {
     if (!e) return false;
-    const matchesSearch = (e.eventName?.toLowerCase().includes(search.toLowerCase())) || 
-                         (e.department?.toLowerCase().includes(search.toLowerCase()));
+    const matchesSearch = (e.eventName?.toLowerCase()?.includes(search.toLowerCase())) || 
+                         (e.department?.toLowerCase()?.includes(search.toLowerCase()));
     const matchesCategory = selectedCategory === 'ALL' || e.department?.toUpperCase() === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -72,12 +72,23 @@ const EventsPage = () => {
         </div>
       </div>
 
-      <div className="search-container" style={{ gap: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '3rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         {categories.map(cat => (
           <button 
             key={cat} 
-            className="btn-elite" 
-            style={{ width: 'auto', background: selectedCategory === cat ? 'var(--primary)' : 'transparent', border: '1px solid var(--glass-border)', padding: '0.5rem 1.2rem', fontSize: '0.8rem' }}
+            className="innovative-badge"
+            style={{ 
+                cursor: 'pointer',
+                width: 'auto', 
+                background: selectedCategory === cat ? 'var(--primary)' : 'var(--glass-bg)', 
+                color: selectedCategory === cat ? 'white' : 'var(--text-main)',
+                border: selectedCategory === cat ? 'none' : '1px solid var(--glass-border)', 
+                padding: '0.6rem 1.4rem', 
+                fontSize: '0.75rem',
+                fontWeight: 900,
+                boxShadow: selectedCategory === cat ? '0 0 15px var(--primary-bright)' : 'none',
+                transition: '0.3s'
+            }}
             onClick={() => setSelectedCategory(cat)}
           >
             {cat}
@@ -96,19 +107,27 @@ const EventsPage = () => {
             const isSoldOut = ev.availableTickets === 0;
             const badgeColor = ev.department?.toUpperCase().includes('CS') ? 'var(--vivid-pink)' : 'var(--primary)';
             return (
-              <div key={ev.id} className="event-card" style={{ cursor: isSoldOut ? 'default' : 'pointer', opacity: isSoldOut ? 0.7 : 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                  <span className="innovative-badge" style={{ background: badgeColor }}>{ev.department}</span>
-                  <span style={{ fontWeight: '800', color: 'var(--success)' }}>₹{ev.price}</span>
+              <div key={ev.id} className="event-card" style={{ cursor: isSoldOut ? 'default' : 'pointer', opacity: isSoldOut ? 0.7 : 1, padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <span style={{ 
+                            background: isSoldOut ? 'var(--vivid-pink)' : 'var(--success)', 
+                            color: 'white', padding: '0.4rem 1rem', borderRadius: '2rem', 
+                            fontSize: '0.65rem', fontWeight: 900, letterSpacing: '1px'
+                        }}>
+                            {isSoldOut ? 'SOLD OUT' : 'AVAILABLE'}
+                        </span>
+                        <span style={{ fontWeight: '800', color: 'var(--success)' }}>₹{ev.price}</span>
+                    </div>
+                    <h2 style={{ fontSize: '1.4rem' }}>{ev.eventName}</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', color: 'var(--text-dim)', fontSize: '0.8rem', margin: '1rem 0 2rem 0' }}>
+                       <span>📍</span> <span>{ev.venue}</span>
+                       <span>🕒</span> <span>{ev.dateTime}</span>
+                    </div>
+                    <button className="btn-primary" disabled={isSoldOut} onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
+                        {isSoldOut ? 'REGISTRY CLOSED' : 'CONFIRM ENTRY'}
+                    </button>
                 </div>
-                <h2 style={{ fontSize: '1.4rem' }}>{ev.eventName}</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', color: 'var(--text-dim)', fontSize: '0.8rem', margin: '1rem 0 2rem 0' }}>
-                   <span>📍</span> <span>{ev.venue}</span>
-                   <span>🕒</span> <span>{ev.dateTime}</span>
-                </div>
-                <button className="btn-primary" disabled={isSoldOut} onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>
-                    {isSoldOut ? 'REGISTRY CLOSED' : 'CONFIRM ENTRY'}
-                </button>
               </div>
             );
           })}

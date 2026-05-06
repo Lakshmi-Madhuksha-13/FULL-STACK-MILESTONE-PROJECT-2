@@ -23,6 +23,21 @@ public class EventController {
         return eventRepository.findAll();
     }
     
+    @PutMapping("/shift-dates")
+    public ResponseEntity<?> shiftAllEventDates() {
+        List<Event> events = eventRepository.findAll();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime nextMonth = now.plusMonths(1);
+        int dayOffset = 1;
+        for (Event event : events) {
+            java.time.LocalDateTime newDate = nextMonth.plusDays(dayOffset);
+            event.setDateTime(newDate.toString().substring(0, 16)); // format: YYYY-MM-DDTHH:MM
+            eventRepository.save(event);
+            dayOffset++;
+        }
+        return ResponseEntity.ok("All event dates shifted to next month successfully!");
+    }
+    
     @GetMapping("/{id}")
     public ResponseEntity<Event> getEventById(@PathVariable Long id) {
         Optional<Event> event = eventRepository.findById(id);

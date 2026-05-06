@@ -26,6 +26,9 @@ public class UserController {
         if (user.getRole() == null || user.getRole().isEmpty()) {
             user.setRole("USER"); // default role
         }
+        if (user.getCoins() == null) {
+            user.setCoins(100); // Initial balance
+        }
         User savedUser = userRepository.save(user);
         return ResponseEntity.ok(savedUser);
     }
@@ -42,6 +45,11 @@ public class UserController {
             }
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        return userRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/google-login")
@@ -62,10 +70,30 @@ public class UserController {
     public ResponseEntity<?> updateCoins(@PathVariable Long id, @RequestBody java.util.Map<String, Integer> request) {
         return userRepository.findById(id).map(user -> {
             Integer addedCoins = request.get("coins");
-            if (user.getCoins() == null) user.setCoins(100);
-            user.setCoins(user.getCoins() + addedCoins);
+            int current = user.getCoins() != null ? user.getCoins() : 100;
+            int newTotal = current + addedCoins;
+            user.setCoins(newTotal);
+
+            // 🚀 UPGRADATION LOGIC
+            if (newTotal > 1000) user.setTier("LEGEND");
+            else if (newTotal > 500) user.setTier("ELITE");
+            else if (newTotal > 200) user.setTier("PRO");
+            else user.setTier("ROOKIE");
+
             return ResponseEntity.ok(userRepository.save(user));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/rank")
+    public ResponseEntity<?> getUserRank(@PathVariable Long id) {
+        List<User> all = userRepository.findAll().stream()
+                .peek(u -> { if(u.getCoins() == null) u.setCoins(0); })
+                .sorted((a, b) -> b.getCoins().compareTo(a.getCoins()))
+                .toList();
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).getId().equals(id)) return ResponseEntity.ok(i + 1);
+        }
+        return ResponseEntity.ok(0);
     }
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
@@ -74,7 +102,10 @@ public class UserController {
 
     @GetMapping("/leaderboard")
     public ResponseEntity<?> getLeaderboard() {
-        return ResponseEntity.ok(userRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "coins")).stream().limit(10).toList());
+        return ResponseEntity.ok(userRepository.findAll().stream()
+                .peek(u -> { if(u.getCoins() == null) u.setCoins(0); })
+                .sorted((a, b) -> b.getCoins().compareTo(a.getCoins()))
+                .limit(10).toList());
     }
 
     @DeleteMapping("/{id}")
@@ -112,6 +143,8 @@ public class UserController {
     @PostMapping("/notifications/global")
     public ResponseEntity<?> createGlobalNotification(@RequestBody java.util.Map<String, String> request) {
         String message = request.get("message");
+        com.veltech.userservice.model.Notification globalNote = new com.veltech.userservice.model.Notification(0L, message);
+        notificationRepository.save(globalNote);
         messagingTemplate.convertAndSend("/topic/global", request);
         return ResponseEntity.ok().build();
     }
@@ -138,14 +171,41 @@ public class UserController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody java.util.Map<String, String> request) {
-        String email = request.get("email");
-        String newPassword = request.get("newPassword");
-        return userRepository.findByEmail(email).map(user -> {
-            user.setPassword(newPassword);
-            userRepository.save(user);
-            return ResponseEntity.ok("Password reset successfully");
-        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found"));
+    @PostMapping("/{id}/quest")
+    public ResponseEntity<?> redeemQuest(@PathVariable Long id, @RequestBody java.util.Map<String, String> request) {
+        String questCode = request.get("questCode");
+        if (questCode == null || questCode.isEmpty()) return ResponseEntity.badRequest().body("Invalid Quest Code.");
+
+        return userRepository.findById(id).map(user -> {
+            String used = user.getUsedQuests() != null ? user.getUsedQuests() : "";
+            if (java.util.Arrays.asList(used.split(",")).contains(questCode)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Quest already completed.");
+            }
+
+            // Award logic based on quest type
+            int bonus = 50; 
+            if (questCode.startsWith("S-")) bonus = 150; // Sponsor quests
+            else if (questCode.startsWith("M-")) bonus = 250; // Master quests
+
+            user.setCoins((user.getCoins() != null ? user.getCoins() : 0) + bonus);
+            user.setUsedQuests(used.isEmpty() ? questCode : used + "," + questCode);
+
+            // Tier Update
+            int newTotal = user.getCoins();
+            if (newTotal > 1000) user.setTier("LEGEND");
+            else if (newTotal > 500) user.setTier("ELITE");
+            else if (newTotal > 200) user.setTier("PRO");
+
+            User saved = userRepository.save(user);
+            
+            // Notify User
+            com.veltech.userservice.model.Notification n = new com.veltech.userservice.model.Notification(id, "🎖️ QUEST COMPLETED: You earned " + bonus + " Coins for " + questCode + "! Your tier is now " + user.getTier());
+            notificationRepository.save(n);
+            messagingTemplate.convertAndSend("/topic/notifications/" + id, n);
+
+            return ResponseEntity.ok(saved);
+        }).orElse(ResponseEntity.notFound().build());
     }
+
+    @PostMapping("/reset-password")
 }

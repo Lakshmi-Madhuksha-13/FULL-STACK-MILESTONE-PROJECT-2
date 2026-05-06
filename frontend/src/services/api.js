@@ -3,12 +3,17 @@ import axios from 'axios';
 // 🌐 ENTERPRISE CLOUD SYNC
 const isProduction = false; 
 
+const getBaseURL = (port) => {
+    const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    return `http://${host}:${port}/api`;
+};
+
 const LOCAL_URLS = {
-    USER_SERVICE: "http://192.168.29.17:8081/api/users",
-    EVENT_SERVICE: "http://192.168.29.17:8082/api/events",
-    BOOKING_SERVICE: "http://192.168.29.17:8083/api/bookings",
-    COUPON_SERVICE: "http://192.168.29.17:8083/api/coupons",
-    SUPPORT_SERVICE: "http://192.168.29.17:8081/api/support"
+    USER_SERVICE: getBaseURL(8081) + "/users",
+    EVENT_SERVICE: getBaseURL(8082) + "/events",
+    BOOKING_SERVICE: getBaseURL(8083) + "/bookings",
+    COUPON_SERVICE: getBaseURL(8083) + "/coupons",
+    SUPPORT_SERVICE: getBaseURL(8081) + "/support"
 };
 
 const CLOUD_URLS = {
@@ -29,21 +34,7 @@ const api = {
     support: axios.create({ baseURL: URLS.SUPPORT_SERVICE })
 };
 
-// 🛡️ ATOMIC INTERCEPTORS (Prevents Blank Screen on Network Hiccups)
-const applyResilience = (inst) => {
-    inst.interceptors.response.use(
-        r => r,
-        e => {
-            console.log("[Resilience Hub]: Stabilizing connection...");
-            return Promise.resolve({ data: [] }); // Safe fallback to prevent crash
-        }
-    );
-};
-
-applyResilience(api.user);
-applyResilience(api.event);
-applyResilience(api.booking);
-applyResilience(api.coupon);
-applyResilience(api.support);
+// 🛡️ API INTERCEPTORS (Optional: Add Auth tokens here if needed)
+// No global error-swallowing to ensure proper component state management
 
 export default api;

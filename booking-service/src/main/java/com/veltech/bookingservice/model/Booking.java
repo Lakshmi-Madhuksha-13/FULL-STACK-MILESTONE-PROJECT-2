@@ -20,8 +20,16 @@ public class Booking {
     // 🏦 FINANCIAL STATUS FIELD
     private String status = "CONFIRMED"; // CONFIRMED, CANCELLED, REFUNDED, ADMITTED
     
+    // 💸 REFUND TRACKING
+    private String refundStatus = "NONE"; // NONE, REQUESTED, PROCESSING, APPROVED, REJECTED, REFUNDED
+    
     private Integer rating;
     private String review;
+    private java.time.LocalDateTime cancelledAt;
+    
+    // 💺 NEW FIELDS FOR UPGRADE
+    private String seatNumber;
+    private Boolean usedFlag = false;
 
     public Booking() {
     }
@@ -60,4 +68,16 @@ public class Booking {
 
     public String getReview() { return review; }
     public void setReview(String review) { this.review = review; }
+
+    public String getRefundStatus() { return refundStatus; }
+    public void setRefundStatus(String refundStatus) { this.refundStatus = refundStatus; }
+
+    public java.time.LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(java.time.LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public String getSeatNumber() { return seatNumber; }
+    public void setSeatNumber(String seatNumber) { this.seatNumber = seatNumber; }
+
+    public Boolean getUsedFlag() { return usedFlag; }
+    public void setUsedFlag(Boolean usedFlag) { this.usedFlag = usedFlag; }
 }
