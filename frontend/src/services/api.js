@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 🌐 ENTERPRISE CLOUD SYNC
-const isProduction = false; 
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'; 
 
 const getBaseURL = (port) => {
     const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
@@ -17,11 +17,11 @@ const LOCAL_URLS = {
 };
 
 const CLOUD_URLS = {
-    USER_SERVICE: "https://your-users.render.com/api/users",
-    EVENT_SERVICE: "https://your-events.render.com/api/events",
-    BOOKING_SERVICE: "https://your-bookings.render.com/api/bookings",
-    COUPON_SERVICE: "https://your-bookings.render.com/api/coupons",
-    SUPPORT_SERVICE: "https://your-users.render.com/api/support"
+    USER_SERVICE: "/api/users",
+    EVENT_SERVICE: "/api/events",
+    BOOKING_SERVICE: "/api/bookings",
+    COUPON_SERVICE: "/api/coupons",
+    SUPPORT_SERVICE: "/api/support"
 };
 
 const URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;

@@ -261,7 +261,27 @@ const AdminDashboard = () => {
         }
         console.log("[Gate Nexus]: Pass Authenticated -", b.id);
         const uName = (users || []).find(u => u.id.toString() === b.userId.toString())?.name || `Participant #${b.userId}`;
-        showModal('Gate Entry Verified', `Pass TF-${b.id} for "${uName}" found. Admit participant?`, () => {
+        const ev = (events || []).find(e => e.id.toString() === b.eventId.toString());
+        
+        showModal('Gate Entry Verified', (
+            <div style={{ textAlign: 'left' }}>
+                <p>Pass TF-{b.id} for <strong>"{uName}"</strong> found. Admit participant?</p>
+                {ev && (
+                    <div style={{ marginTop: '1.5rem' }}>
+                        <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 900, marginBottom: '0.5rem' }}>VENUE LOCATION</div>
+                        <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                            <iframe
+                                title="Admin Verify Map"
+                                width="100%"
+                                height="150"
+                                style={{ border: 'none', display: 'block' }}
+                                src={`https://maps.google.com/maps?q=${encodeURIComponent(ev.venue)}&output=embed&z=14`}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+        ), () => {
             closeModal();
             handleUpdateStatus(b, 'ADMITTED');
         }, false);
@@ -280,16 +300,16 @@ const AdminDashboard = () => {
   };
 
   const totalRevenue = useMemo(() => {
-    const real = (bookings || []).reduce((s, b) => {
+    return (bookings || []).reduce((s, b) => {
       const status = (b.status || '').toUpperCase();
-      if (['CONFIRMED', 'ADMITTED', 'SUCCESS', 'PAID'].includes(status)) {
+      // 🛡️ INCLUSIVE REVENUE: Count everything that isn't cancelled or rejected
+      const isInvalid = ['CANCELLED', 'REFUNDED', 'REJECTED', 'VOID'].includes(status);
+      if (!isInvalid) {
         const amt = parseFloat(b.totalAmount?.toString().replace(/[^0-9.]/g, '')) || 0;
         return s + amt;
       }
       return s;
     }, 0);
-    // 🛡️ REVENUE BASELINE: Show baseline if no real bookings yet
-    return real > 0 ? real : 24950;
   }, [bookings]);
 
   const analyticsData = useMemo(() => {
@@ -299,10 +319,32 @@ const AdminDashboard = () => {
       return d.toLocaleDateString('en-US', { weekday: 'short' });
     });
 
-    const bookingsByDay = last7Days.map((_, i) => (bookings.filter(b => new Date(b.dateTime).getDay() === i).length || Math.floor(Math.random() * 15) + 10)); 
+    const parseNexusDate = (raw) => {
+        try {
+            if (!raw) return new Date(NaN);
+            if (Array.isArray(raw)) return new Date(raw[0], raw[1] - 1, raw[2], raw[3] || 0, raw[4] || 0);
+            const d = new Date(raw);
+            if (!isNaN(d.getTime())) return d;
+            return new Date(NaN);
+        } catch { return new Date(NaN); }
+    };
+
+    const bookingsByDay = last7Days.map((_, i) => (bookings.filter(b => {
+        const rawDate = b.bookingDate || b.timestamp || b.createdAt || b.dateTime;
+        const d = parseNexusDate(rawDate);
+        if (isNaN(d.getTime())) return false;
+        return d.getDay() === (new Date().getDay() - (6 - i) + 7) % 7;
+    }).length)); 
+
     const revenueByDay = last7Days.map((_, i) => {
-      const real = bookings.filter(b => new Date(b.dateTime).getDay() === i).reduce((s, b) => s + (parseFloat(b.totalAmount) || 0), 0);
-      return real > 0 ? real : Math.floor(Math.random() * 4000) + 2500;
+      return bookings.filter(b => {
+          const rawDate = b.bookingDate || b.timestamp || b.createdAt || b.dateTime;
+          const d = parseNexusDate(rawDate);
+          const status = (b.status || '').toUpperCase();
+          const isInvalid = ['CANCELLED', 'REFUNDED', 'REJECTED', 'VOID'].includes(status);
+          const matchesDay = !isNaN(d.getTime()) && d.getDay() === (new Date().getDay() - (6 - i) + 7) % 7;
+          return matchesDay && !isInvalid;
+      }).reduce((s, b) => s + (parseFloat(b.totalAmount) || 0), 0);
     });
 
     return {
@@ -314,22 +356,26 @@ const AdminDashboard = () => {
           borderColor: '#8b5cf6',
           backgroundColor: 'rgba(139, 92, 246, 0.1)',
           tension: 0.4,
-          fill: true
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6
         }]
       },
       revenue: {
         labels: last7Days,
         datasets: [{
-          label: 'Revenue Trend (₹)',
+          label: 'Revenue Stream (₹)',
           data: revenueByDay,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           tension: 0.4,
-          fill: true
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6
         }]
       }
     };
-  }, []);
+  }, [bookings]);
 
   const ALL_TABS = [
     ['analytics', 'ANALYTICS HUD'], 
@@ -408,7 +454,8 @@ const AdminDashboard = () => {
                 border: `2px solid ${activeTab === id ? 'var(--primary)' : 'var(--glass-border)'}`, 
                 color: 'white', padding: '1rem', borderRadius: '16px', cursor: 'pointer', 
                 fontWeight: 900, fontSize: '0.8rem', transition: '0.3s', pointerEvents: 'auto',
-                boxShadow: activeTab === id ? '0 10px 20px rgba(139,92,246,0.2)' : 'none'
+                boxShadow: activeTab === id ? '0 10px 20px rgba(139,92,246,0.2)' : 'none',
+                gridColumn: id === 'transactions' ? '1' : 'auto'
               }}>
               {label}
             </button>
@@ -463,7 +510,6 @@ const AdminDashboard = () => {
                                     <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>ALL SERVICES ONLINE</div>
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -481,7 +527,16 @@ const AdminDashboard = () => {
             <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="glass-panel" style={{ padding: '2rem', marginBottom: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
                 <h3 style={{ gridColumn: 'span 2', fontSize: '1rem' }}>{editingEvent ? 'Edit Event' : 'Create New Event'}</h3>
                 <input className="form-control" value={editingEvent ? editingEvent.eventName : newEvent.eventName} onChange={e => editingEvent ? setEditingEvent({...editingEvent, eventName: e.target.value}) : setNewEvent({...newEvent, eventName: e.target.value})} placeholder="Event Name" required />
-                <input className="form-control" value={editingEvent ? editingEvent.venue : newEvent.venue} onChange={e => editingEvent ? setEditingEvent({...editingEvent, venue: e.target.value}) : setNewEvent({...newEvent, venue: e.target.value})} placeholder="Venue" />
+                <div style={{ gridColumn: 'span 1' }}>
+                  <input className="form-control" value={editingEvent ? editingEvent.venue : newEvent.venue} onChange={e => editingEvent ? setEditingEvent({...editingEvent, venue: e.target.value}) : setNewEvent({...newEvent, venue: e.target.value})} placeholder="Venue" />
+                  {(editingEvent?.venue || newEvent?.venue) && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.6rem', color: 'var(--primary)' }}>
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(editingEvent ? editingEvent.venue : newEvent.venue)}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                        👁️ Verify Venue Location ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
                 <input className="form-control" value={editingEvent ? editingEvent.department : newEvent.department} onChange={e => editingEvent ? setEditingEvent({...editingEvent, department: e.target.value}) : setNewEvent({...newEvent, department: e.target.value})} placeholder="Department" />
                 <input type="number" className="form-control" value={editingEvent ? editingEvent.price : newEvent.price} onChange={e => editingEvent ? setEditingEvent({...editingEvent, price: parseFloat(e.target.value)}) : setNewEvent({...newEvent, price: parseFloat(e.target.value)})} placeholder="Price (₹)" />
                 <input type="datetime-local" className="form-control" value={editingEvent ? editingEvent.dateTime : newEvent.dateTime} onChange={e => editingEvent ? setEditingEvent({...editingEvent, dateTime: e.target.value}) : setNewEvent({...newEvent, dateTime: e.target.value})} />
@@ -597,7 +652,7 @@ const AdminDashboard = () => {
                               </div>
                             </td>
                             <td style={{ padding: '1.5rem', textAlign: 'right', borderRadius: '0 15px 15px 0' }}>
-                              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', position: 'relative', zIndex: 1000, pointerEvents: 'auto' }}>
                                  {b.status === 'CONFIRMED' && (
                                    <>
                                      <button className="btn-elite" onClick={() => handleUpdateStatus(b, 'ADMITTED')} style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.2rem', fontSize: '0.7rem', fontWeight: 900 }}>ADMIT</button>

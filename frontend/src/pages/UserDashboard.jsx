@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TicketModal from '../components/TicketModal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -256,6 +256,20 @@ const UserDashboard = () => {
   const [modal, setModal] = useState({ show: false });
   const [ticketView, setTicketView] = useState(null);
   const [certView, setCertView] = useState(null);
+  const location = useLocation();
+  const fetchAllRef = useRef(null);
+
+  // 🛡️ SYNC TAB STATE: Allows external redirects to focus on specific sections
+  // Uses a ref to avoid TDZ crash (fetchAll is declared later in file)
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+      // Force multiple immediate fetches to beat any potential backend eventual consistency delay
+      setTimeout(() => { if (fetchAllRef.current) fetchAllRef.current(); }, 500);
+      setTimeout(() => { if (fetchAllRef.current) fetchAllRef.current(); }, 1500);
+      setTimeout(() => { if (fetchAllRef.current) fetchAllRef.current(); }, 3000);
+    }
+  }, [location]);
 
   useEffect(() => {
     try {
@@ -299,17 +313,24 @@ const UserDashboard = () => {
   const closeModal = () => setModal({ show: false });
 
   const fetchAll = useCallback(async () => {
-    if (!user?.id) return;
+    // 🛡️ RE-SYNC IDENTITY: Ensure we have the latest user data (like coins) before fetching
+    const stored = localStorage.getItem('currentUser');
+    let activeUser = user;
+    if (stored && stored !== 'undefined') {
+      try { activeUser = JSON.parse(stored); setUser(activeUser); } catch(e) {}
+    }
+
+    if (!activeUser?.id) return;
     try {
-      console.log("[Portal Nexus]: Syncing data for User ID:", user.id);
+      console.log(`[Portal Nexus]: Synchronizing data for Identity #${activeUser.id}...`);
       const [bRes, eRes, nRes, wRes] = await Promise.all([
-        api.booking.get(`/user/${user.id}`).catch(err => { console.error("Booking Fetch Failed:", err); return { data: [] }; }),
+        api.booking.get(`/user/${activeUser.id}`).catch(err => { console.error("Booking Fetch Failed:", err); return { data: [] }; }),
         api.event.get('').catch(err => { console.error("Event Fetch Failed:", err); return { data: [] }; }),
-        api.user.get(`/${user.id}/notifications`).catch(err => { console.error("Notif Fetch Failed:", err); return { data: [] }; }),
-        api.booking.get(`/waitlist/user/${user.id}`).catch(err => { console.error("Waitlist Fetch Failed:", err); return { data: [] }; }),
+        api.user.get(`/${activeUser.id}/notifications`).catch(err => { console.error("Notif Fetch Failed:", err); return { data: [] }; }),
+        api.booking.get(`/waitlist/user/${activeUser.id}`).catch(err => { console.error("Waitlist Fetch Failed:", err); return { data: [] }; }),
       ]);
       
-      console.log("[Portal Nexus]: Sync successful. Records found:", bRes.data?.length);
+      console.log(`[Portal Nexus]: Sync successful for Identity #${activeUser.id}. Records:`, bRes.data?.length);
       
       if (Array.isArray(bRes.data)) setBookings(bRes.data);
       if (Array.isArray(eRes.data)) setAllEvents(eRes.data);
@@ -318,16 +339,19 @@ const UserDashboard = () => {
       setIsLoaded(true);
     } catch (err) {
       console.error("[Portal Nexus]: Critical Sync Failure:", err);
+      showToast("Real-time sync interrupted. Check connection.", false);
       setIsLoaded(true);
     }
   }, [user?.id]);
 
+  // Keep ref in sync with latest fetchAll (avoids stale closures)
+  useEffect(() => { fetchAllRef.current = fetchAll; }, [fetchAll]);
+
   useEffect(() => {
-    if (user?.id) { 
-      fetchAll();
-      const t = setInterval(fetchAll, 10000);
-      return () => clearInterval(t);
-    }
+    if (!user?.id) return;
+    fetchAll();
+    const i = setInterval(fetchAll, 3000); // 🚀 ULTRA-SYNC: 3s
+    return () => clearInterval(i);
   }, [user?.id, fetchAll]);
 
   const handleRequestRefund = (b) => {
@@ -339,12 +363,14 @@ const UserDashboard = () => {
       closeModal();
       try {
         console.log("[Portal Nexus]: Initiating revocation for TF-" + b.id);
-        await api.booking.put(`/${b.id}/refund-request`);
+        // 🛡️ FIX: Added empty body to PUT request to prevent connection reset issues
+        await api.booking.put(`/${b.id}/refund-request`, {}); 
         showToast('Booking cancelled. Refund in progress.');
         fetchAll();
       } catch (err) { 
         console.error("Revocation Failed:", err);
-        showToast('Cancellation failed. Please try again.', false); 
+        const msg = err.response?.data || "Connection failed. Registry sync interrupted.";
+        showToast(msg, false); 
       }
     });
   };
@@ -400,9 +426,12 @@ const UserDashboard = () => {
           <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 950 }}>User Portal</h1>
           <p style={{ opacity: 0.7, fontSize: '0.9rem', marginTop: '0.5rem' }}>Manage your event participation and support requests.</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.8rem' }}>
+          <button className="btn-elite" onClick={fetchAll} style={{ padding: '0.6rem 1.2rem', fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            🔄 SYNC PORTAL
+          </button>
           {countdown.target && (
-            <div style={{ marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.8rem 1.2rem', borderRadius: '12px', textAlign: 'left' }}>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.8rem 1.2rem', borderRadius: '12px', textAlign: 'left' }}>
               <div style={{ fontSize: '0.6rem', fontWeight: 900, opacity: 0.6, letterSpacing: '1px' }}>NEXT MISSION IN:</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 950, color: 'white' }}>{countdown.text}</div>
               <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>Target: {countdown.target}</div>
@@ -421,29 +450,47 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      <div className="nav-sticky" style={{ marginBottom: '3rem' }}>
-        <div className="app-container" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
-          gap: '1rem', 
-          justifyContent: 'center' 
-        }}>
-          {TABS.map(([id, label]) => (
-            <button key={id} onClick={(e) => { 
-                e.stopPropagation();
-                console.log("[Portal UI]: Tab ->", id); 
-                setActiveTab(id); 
-              }}
-              style={{ 
-                background: activeTab === id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', 
-                border: `2px solid ${activeTab === id ? 'var(--primary)' : 'var(--glass-border)'}`, 
-                color: 'white', padding: '1rem', borderRadius: '16px', cursor: 'pointer', 
-                fontWeight: 900, fontSize: '0.8rem', transition: '0.3s', pointerEvents: 'auto',
-                boxShadow: activeTab === id ? '0 10px 20px rgba(139,92,246,0.2)' : 'none'
-              }}>
-              {label}
-            </button>
-          ))}
+      <div className="nav-sticky" style={{ marginBottom: '3rem', pointerEvents: 'auto' }}>
+        <div className="app-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* 🚀 ROW 1: PRIMARY ACTIONS */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '1rem' 
+          }}>
+            {TABS.slice(0, 5).map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)}
+                style={{ 
+                  background: activeTab === id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', 
+                  border: `2px solid ${activeTab === id ? 'var(--primary)' : 'var(--glass-border)'}`, 
+                  color: 'white', padding: '1rem', borderRadius: '16px', cursor: 'pointer', 
+                  fontWeight: 900, fontSize: '0.75rem', transition: '0.3s',
+                  boxShadow: activeTab === id ? '0 10px 20px rgba(139,92,246,0.2)' : 'none'
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* 📊 ROW 2: HISTORY & INTEL */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '1rem' 
+          }}>
+            {TABS.slice(5).map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)}
+                style={{ 
+                  background: activeTab === id ? 'var(--secondary)' : 'rgba(255,255,255,0.05)', 
+                  border: `2px solid ${activeTab === id ? 'var(--secondary)' : 'var(--glass-border)'}`, 
+                  color: 'white', padding: '1rem', borderRadius: '16px', cursor: 'pointer', 
+                  fontWeight: 900, fontSize: '0.75rem', transition: '0.3s',
+                  boxShadow: activeTab === id ? '0 10px 20px rgba(236,72,153,0.1)' : 'none'
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -469,24 +516,36 @@ const UserDashboard = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'center' }}>
                       <div className="mobile-text-center">
                         <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{ev.eventName}</div>
-                        <div style={{ opacity: 0.5, fontSize: '0.8rem', marginTop: '0.4rem' }}>ID: TF-{b.id} • Seats: {b.ticketsBooked} • Venue: {ev.venue}</div>
+                        <div style={{ opacity: 0.5, fontSize: '0.8rem', marginTop: '0.4rem' }}>
+                          ID: TF-{b.id} • Seats: {b.ticketsBooked} • Venue: 
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.venue)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--primary)', textDecoration: 'none', marginLeft: '0.4rem', fontWeight: 700 }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {ev.venue} ↗
+                          </a>
+                        </div>
                         <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
                            <StatusBadge status={b.status} />
                            <span style={{ fontSize: '0.7rem', fontWeight: 900, color: isAdmitted ? '#10b981' : isRejected ? '#f43f5e' : '#94a3b8', opacity: 0.8 }}>● {gateStatus}</span>
                         </div>
                       </div>
-                      <div className="flex-stack-mobile" style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 9999 }}>
-                        <button className="btn-elite" onClick={(e) => { 
-                            e.stopPropagation();
-                            console.log("[Portal Action]: Open Pass for TF-" + b.id); 
-                            setTicketView({ booking: b, event: ev }); 
-                          }} style={{ background: 'var(--primary)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>OPEN PASS</button>
+                      <div className="flex-stack-mobile" style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 2000, pointerEvents: 'auto' }}>
+                        <button 
+                          className="btn-elite" 
+                          onClick={(e) => { e.stopPropagation(); setTicketView({ booking: b, event: ev }); }}
+                          style={{ padding: '0.8rem 1.5rem', fontSize: '0.7rem', background: 'var(--primary)', border: 'none', zIndex: 99999, pointerEvents: 'auto', cursor: 'pointer' }}>
+                          VIEW PASS
+                        </button>
                         
                         {isAdmitted && (
                           <button className="btn-elite" onClick={(e) => { 
                               e.stopPropagation();
                               setCertView({ booking: b, event: ev });
-                            }} style={{ background: 'linear-gradient(45deg, #8b5cf6, #ec4899)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>🎓 GET CERTIFICATE</button>
+                            }} style={{ background: 'linear-gradient(45deg, #8b5cf6, #ec4899)', border: 'none', padding: '0.7rem 1.5rem', zIndex: 99999, pointerEvents: 'auto', cursor: 'pointer' }}>🎓 GET CERTIFICATE</button>
                         )}
 
                         {(s === 'CONFIRMED' || s === 'PENDING') && (
@@ -494,7 +553,7 @@ const UserDashboard = () => {
                               e.stopPropagation();
                               console.log("[Portal Action]: Cancel Request for TF-" + b.id);
                               handleRequestRefund(b); 
-                            }} style={{ background: 'var(--accent)', border: 'none', padding: '0.7rem 1.5rem', pointerEvents: 'auto' }}>CANCEL PASS</button>
+                            }} style={{ background: 'var(--accent)', border: 'none', padding: '0.7rem 1.5rem', zIndex: 99999, pointerEvents: 'auto', cursor: 'pointer' }}>CANCEL PASS</button>
                         )}
                       </div>
                     </div>
@@ -520,36 +579,37 @@ const UserDashboard = () => {
           <div className="page-transition">
             <h2 className="gradient-text" style={{ marginBottom: '2.5rem' }}>Merit Certificates</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {bookings.filter(b => (b.status || '').toUpperCase() === 'ADMITTED').map(b => {
-                const ev = allEvents.find(e => e.id.toString() === b.eventId.toString());
+              {bookings.filter(b => {
+                const bEvId = b.eventId || b.event_id || b.event?.id;
+                const ev = allEvents.find(e => (e.id || e.eventId || '').toString() === (bEvId || '').toString());
+                const isPast = ev && new Date(ev.dateTime) < new Date();
+                return b.status === 'CONFIRMED' || b.status === 'ADMITTED';
+              }).map(b => {
+                const bEvId = b.eventId || b.event_id || b.event?.id;
+                const ev = allEvents.find(e => (e.id || e.eventId || '').toString() === (bEvId || '').toString());
+                const isPast = ev && new Date(ev.dateTime) < new Date();
+                
                 return (
-                  <div key={b.id} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(139,92,246,0.05)', border: '1px solid var(--glass-border)' }}>
+                  <div key={b.id} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(139,92,246,0.05)', border: '1px solid var(--glass-border)', position: 'relative', zIndex: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                             <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📜</div>
                             <div style={{ fontWeight: 900, marginBottom: '0.5rem' }}>{ev?.eventName || 'Technical Event'}</div>
                             <div style={{ fontSize: '0.7rem', opacity: 0.5, marginBottom: '1rem' }}>ID: TF-GEN-{b.id}</div>
                         </div>
-                        {(!b.rating) && (
-                            <button className="btn-elite" onClick={() => {
-                                const rating = prompt("Rate this event (1-5):", "5");
-                                const review = prompt("Write a short review:");
-                                if (rating) {
-                                    api.booking.post(`/${b.id}/review`, { rating: parseInt(rating), review }).then(() => {
-                                        showToast("Thank you for your feedback!");
-                                        fetchAll();
-                                    });
-                                }
-                            }} style={{ padding: '0.5rem 1rem', fontSize: '0.6rem', background: 'var(--accent)' }}>RATE EVENT</button>
-                        )}
                         {b.rating && <div style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 900 }}>⭐ {b.rating}/5</div>}
                     </div>
-                    <button className="btn-primary" onClick={() => setCertView({ booking: b, event: ev })} style={{ fontSize: '0.8rem', width: '100%', marginTop: '1rem' }}>VIEW MERIT</button>
+                    <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem', position: 'relative', zIndex: 1000, pointerEvents: 'auto' }}>
+                        <button className="btn-primary" onClick={() => setCertView({ booking: b, event: ev })} style={{ fontSize: '0.8rem', flex: 1 }}>VIEW PREVIEW</button>
+                        {isPast && (
+                            <button className="btn-primary" onClick={() => setCertView({ booking: b, event: ev })} style={{ fontSize: '0.8rem', flex: 1, background: 'var(--success)' }}>DOWNLOAD</button>
+                        )}
+                    </div>
                   </div>
                 );
               })}
-              {isLoaded && !bookings.some(b => (b.status || '').toUpperCase() === 'ADMITTED') && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', opacity: 0.3, padding: '5rem' }}>Certificates unlock after gate admission.</div>
+              {isLoaded && bookings.length === 0 && (
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', opacity: 0.3, padding: '5rem' }}>No bookings found. Secure your spot in an event to earn merit.</div>
               )}
             </div>
           </div>

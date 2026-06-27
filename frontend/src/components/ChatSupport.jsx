@@ -10,10 +10,27 @@ const ChatSupport = () => {
     const scrollRef = useRef();
 
     useEffect(() => {
-        const stored = localStorage.getItem('currentUser');
-        if (stored && stored !== "undefined") {
-            try { setUser(JSON.parse(stored)); } catch(e) {}
-        }
+        const updateUser = () => {
+            const stored = localStorage.getItem('currentUser');
+            if (stored && stored !== "undefined") {
+                try { 
+                    const parsed = JSON.parse(stored);
+                    setUser(prev => (JSON.stringify(prev) !== JSON.stringify(parsed) ? parsed : prev));
+                } catch(e) { setUser(null); }
+            } else {
+                setUser(null);
+            }
+        };
+
+        updateUser();
+        window.addEventListener('storage', updateUser);
+        // Check periodically in case storage event doesn't fire (same tab changes)
+        const checkInterval = setInterval(updateUser, 2000);
+        
+        return () => {
+            window.removeEventListener('storage', updateUser);
+            clearInterval(checkInterval);
+        };
     }, []);
 
     useEffect(() => {
@@ -60,14 +77,17 @@ const ChatSupport = () => {
             setTimeout(async () => {
                 let aiReply = "";
                 const lower = text.toLowerCase();
+                const currentUserName = user?.name || "Participant";
                 
-                if (lower.includes("hello") || lower.includes("hi")) aiReply = `Hi ${user.name}! I'm your Nexus Guide. How can I help you today?`;
-                else if (lower.includes("coin")) aiReply = "You earn coins by booking events and participating. Check your profile for the balance!";
-                else if (lower.includes("ticket")) aiReply = "Your tickets are in the 'My Tickets' section. You can download the QR there.";
-                else if (lower.includes("refund")) aiReply = "Refunds take 5-7 business days to process to your original payment method.";
-                else aiReply = "I've noted that down. A support specialist will jump in if I can't solve it!";
+                if (lower.includes("hello") || lower.includes("hi")) {
+                    aiReply = `Greetings ${currentUserName}! I am the Nexus Intelligence Bot. How can I assist your mission today?`;
+                }
+                else if (lower.includes("coin")) aiReply = `You currently have ${user?.coins || 0} Nexus Coins, ${currentUserName}. You can earn more by scanning hidden QR codes around the venue!`;
+                else if (lower.includes("ticket")) aiReply = "Your digital passes are secured in your 'Ticket Inventory'. Have your QR ready at the gate!";
+                else if (lower.includes("refund")) aiReply = "Refund requests are processed through the 'Refund Tracker'. It usually takes 3-5 standard cycles.";
+                else aiReply = `I've transmitted your query to the human support squad, ${currentUserName}. Is there anything else I can optimize for you?`;
 
-                const aiMsg = { userId: user.id, senderName: 'Nexus Guide', message: aiReply, type: 'ADMIN' };
+                const aiMsg = { userId: user.id, senderName: 'Nexus Intelligence', message: aiReply, type: 'ADMIN' };
                 await api.support.post('/send', aiMsg);
                 setIsTyping(false);
                 setTimeout(fetchMessages, 500);
@@ -79,6 +99,22 @@ const ChatSupport = () => {
 
     return (
         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '9999' }}>
+            {/* 💬 TRIGGER BUBBLE (Visible only when closed) */}
+            {!isOpen && (
+                <button 
+                    onClick={() => setIsOpen(true)}
+                    className="chat-trigger-btn"
+                    style={{
+                        width: '60px', height: '60px', borderRadius: '50%',
+                        background: '#8b5cf6', border: 'none', cursor: 'pointer',
+                        boxShadow: '0 10px 30px rgba(139, 92, 246, 0.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem',
+                        transition: '0.3s transform ease'
+                    }}>
+                    💬
+                </button>
+            )}
+
             <div className={`chat-super-app ${isOpen ? 'active' : ''}`}>
                 {/* 🏷️ HEADER */}
                 <div className="chat-super-header">

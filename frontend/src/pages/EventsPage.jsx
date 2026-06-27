@@ -96,6 +96,60 @@ const EventsPage = () => {
         ))}
       </div>
 
+      {/* 📍 CAMPUS MAP EXPLORER (INTEGRATED) */}
+      <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '4rem', border: '1px solid var(--primary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 950 }}>Campus Nexus Explorer</h2>
+                <p style={{ margin: 0, opacity: 0.5, fontSize: '0.8rem' }}>Live venue telemetry for the festival grounds.</p>
+            </div>
+            <a href="https://maps.google.com/maps?q=Vel+Tech+University+Avadi&z=15" target="_blank" rel="noopener noreferrer" className="btn-elite" style={{ padding: '0.6rem 1.2rem', fontSize: '0.7rem' }}>OPEN FULL MAP ↗</a>
+        </div>
+        <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <iframe
+                title="Campus Events Map"
+                width="100%"
+                height="350"
+                style={{ border: 'none', display: 'block' }}
+                loading="lazy"
+                src={`https://maps.google.com/maps?q=Vel+Tech+University+Avadi&output=embed&z=14`}
+            />
+        </div>
+      </div>
+
+      {/* 📍 VENUE NETWORK INTELLIGENCE */}
+      <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '4rem', border: '1px solid var(--secondary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 950 }}>Venue Network Intelligence</h2>
+                <p style={{ margin: 0, opacity: 0.5, fontSize: '0.8rem' }}>Spatial distribution of all active festival nodes.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+                <button className="btn-elite" onClick={() => fetchEvents()} style={{ padding: '0.6rem 1.2rem', fontSize: '0.7rem' }}>REFRESH NODES</button>
+            </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+            {filteredEvents.slice(0, 4).map(ev => (
+                <div key={`map-${ev.id}`} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ fontWeight: 900, fontSize: '0.9rem', marginBottom: '0.5rem' }}>{ev.eventName}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.5, marginBottom: '1rem' }}>📍 {ev.venue}</div>
+                    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', height: '180px' }}>
+                        <iframe
+                            title={`Map for ${ev.eventName}`}
+                            width="100%"
+                            height="180"
+                            style={{ border: 'none', display: 'block' }}
+                            loading="lazy"
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(ev.venue)}&output=embed&z=14`}
+                        />
+                    </div>
+                    <button className="btn-primary" style={{ width: '100%', marginTop: '1rem', fontSize: '0.7rem', padding: '0.6rem' }} onClick={() => navigate(`/book/${ev.id}`)}>BOOK ENTRY</button>
+                </div>
+            ))}
+        </div>
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '5rem' }}>
            <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid var(--glass-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1.2s linear infinite', margin: '0 auto 1.5rem auto' }}></div>
@@ -121,7 +175,16 @@ const EventsPage = () => {
                     </div>
                     <h2 style={{ fontSize: '1.4rem' }}>{ev.eventName}</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', color: 'var(--text-dim)', fontSize: '0.8rem', margin: '1rem 0 2rem 0' }}>
-                       <span>📍</span> <span>{ev.venue}</span>
+                       <span>📍</span> 
+                       <a 
+                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.venue)}`}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+                         onClick={(e) => e.stopPropagation()}
+                       >
+                         {ev.venue}
+                       </a>
                        <span>🕒</span> <span>{ev.dateTime}</span>
                     </div>
                     <button className="btn-primary" disabled={isSoldOut} onClick={() => !isSoldOut && navigate(`/book/${ev.id}`)}>

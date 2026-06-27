@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -17,6 +18,9 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private com.veltech.userservice.service.UserEmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
@@ -30,6 +34,10 @@ public class UserController {
             user.setCoins(100); // Initial balance
         }
         User savedUser = userRepository.save(user);
+        
+        // 📧 SEND WELCOME EMAIL
+        new Thread(() -> emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName())).start();
+        
         return ResponseEntity.ok(savedUser);
     }
 
@@ -62,7 +70,12 @@ public class UserController {
         } else {
             User newUser = new User(name, email, "GOOGLE_AUTH", "USER", "Not Specified", "Not Specified");
             if(newUser.getCoins() == null) newUser.setCoins(100);
-            return ResponseEntity.ok(userRepository.save(newUser));
+            User saved = userRepository.save(newUser);
+            
+            // 📧 SEND WELCOME EMAIL
+            new Thread(() -> emailService.sendWelcomeEmail(saved.getEmail(), saved.getName())).start();
+            
+            return ResponseEntity.ok(saved);
         }
     }
 
@@ -208,4 +221,13 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody java.util.Map<String, String> request) {
+        String email = request.get("email");
+        String newPassword = request.get("newPassword");
+        return userRepository.findByEmail(email).map(user -> {
+            user.setPassword(newPassword);
+            userRepository.save(user);
+            return ResponseEntity.ok("Password updated successfully.");
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found."));
+    }
 }

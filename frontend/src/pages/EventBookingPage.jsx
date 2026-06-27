@@ -39,6 +39,7 @@ const EventBookingPage = () => {
   const [squads, setSquads] = useState([]);
   const [showSquadForge, setShowSquadForge] = useState(false);
   const [newSquad, setNewSquad] = useState({ teamName: '', skills: '' });
+  const [createdBookingId, setCreatedBookingId] = useState(null);
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -133,10 +134,11 @@ const EventBookingPage = () => {
     setShowPayment(false);
     setLoading(true);
     try {
+       const finalTotal = attendees.reduce((acc, a) => acc + (a.seatPrice || 0), 0) * (1 - (appliedCoupon?.discountPercent || 0) / 100);
        const bRes = await api.booking.post('', {
         userId: user.id, eventId: event.id,
         ticketsBooked: attendees.length,
-        totalAmount: event.price * attendees.length - discountAmount,
+        totalAmount: finalTotal,
         attendeeDetails: JSON.stringify(attendees),
         status: 'CONFIRMED',
         seatNumber: attendees.map(a => a.seatNumber).join(', ')
@@ -146,9 +148,13 @@ const EventBookingPage = () => {
         const cRes = await api.user.put(`/${user.id}/coins`, { coins: 50 * attendees.length }); 
         if(cRes && cRes.data && cRes.data.id) localStorage.setItem('currentUser', JSON.stringify(cRes.data));
       } catch(e) {}
-      setSuccess(true);
-      setTimeout(() => navigate('/dashboard'), 3000);
-    } catch { setError('Booking failed. Contact support.'); }
+       setSuccess(true);
+       setTimeout(() => navigate('/dashboard', { state: { activeTab: 'bookings' } }), 3500);
+    } catch (err) { 
+        console.error("[Booking Nexus]: Critical Failure:", err);
+        const msg = err.response?.data || "Registry sync interrupted. Please verify your identity and retry.";
+        setError(`🚨 ${msg}`); 
+    }
     finally { setLoading(false); }
   };
 
@@ -167,14 +173,26 @@ const EventBookingPage = () => {
   };
 
   if (success) return (
-    <div className="app-container page-transition" style={{ textAlign: 'center', paddingTop: '8rem' }}>
-      <div style={{ fontSize: '6rem', marginBottom: '1.5rem' }}>🎉</div>
-      <h1 className="gradient-text" style={{ fontSize: '3rem' }}>Payment Complete!</h1>
-      <div style={{ margin: '2rem 0', padding: '1.5rem', background: 'rgba(16,185,129,0.1)', borderRadius: '12px', border: '1px solid var(--success)', display: 'inline-block' }}>
-        <div style={{ fontSize: '0.8rem', opacity: 0.6, letterSpacing: '2px', fontWeight: 900 }}>OFFICIAL TICKET ID</div>
-        <div style={{ fontSize: '2.5rem', fontWeight: 950, color: 'var(--success)', fontFamily: 'monospace' }}>TF-{createdBookingId}</div>
+    <div className="app-container page-transition" style={{ textAlign: 'center', paddingTop: '4rem' }}>
+      <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+      <h1 className="gradient-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Success! You're in the Nexus.</h1>
+      <p style={{ color: 'var(--text-dim)', marginBottom: '3rem' }}>Your digital entry pass has been authorized and secured.</p>
+      
+      {/* 🎫 IMMEDIATE TICKET PREVIEW */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4rem' }}>
+         <div className="bounce-in" style={{ transform: 'scale(0.9)', transformOrigin: 'top' }}>
+            <TicketModal 
+                booking={{ id: createdBookingId, ticketsBooked: attendees.length, status: 'CONFIRMED', attendeeDetails: JSON.stringify(attendees) }} 
+                event={event} 
+                user={user} 
+                onClose={() => navigate('/dashboard')} 
+            />
+         </div>
       </div>
-      <p style={{ color: 'var(--text-dim)', fontSize: '1.1rem', marginTop: '1rem' }}>Your entry pass is live. Redirecting to your vault...</p>
+
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <button className="btn-primary" onClick={() => navigate('/dashboard')} style={{ padding: '1rem 3rem' }}>GO TO DASHBOARD →</button>
+      </div>
     </div>
   );
 
@@ -215,8 +233,12 @@ const EventBookingPage = () => {
     <div className="app-container page-transition" style={{ paddingBottom: '10rem' }}>
       
       {showPayment && (
-        <PaymentModal amount={(event.price * attendees.length - discountAmount)} eventName={event.eventName}
-          onSuccess={handlePaymentSuccess} onCancel={() => setShowPayment(false)} />
+        <PaymentModal 
+          amount={attendees.reduce((acc, a) => acc + (a.seatPrice || 0), 0) * (1 - (appliedCoupon?.discountPercent || 0) / 100)} 
+          eventName={event.eventName}
+          onSuccess={handlePaymentSuccess} 
+          onCancel={() => setShowPayment(false)} 
+        />
       )}
 
       {/* 🚢 STEP INDICATOR */}
@@ -395,8 +417,18 @@ const EventBookingPage = () => {
             <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
                 <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 950, letterSpacing: '2px', marginBottom: '1.2rem' }}>EVENT CONTEXT</div>
                 <h3 style={{ fontSize: '1.6rem', fontWeight: 950, marginBottom: '0.8rem' }}>{event.eventName}</h3>
-                <div style={{ opacity: 0.6, fontSize: '0.9rem', marginBottom: '0.5rem' }}>📍 {event.venue}</div>
-                <div style={{ opacity: 0.6, fontSize: '0.9rem' }}>📅 {event.dateTime}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div style={{ opacity: 0.6, fontSize: '0.8rem' }}>📍 {event.venue}</div>
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ color: 'var(--primary)', fontSize: '0.7rem', fontWeight: 900, textDecoration: 'none', pointerEvents: 'auto', zIndex: 100, cursor: 'pointer' }}
+                    >
+                      MAP ↗
+                    </a>
+                </div>
+                <div style={{ opacity: 0.6, fontSize: '0.8rem' }}>📅 {event.dateTime}</div>
             </div>
 
             {/* 🤝 SQUAD FINDER COMMAND CENTER */}
@@ -429,23 +461,36 @@ const EventBookingPage = () => {
                 </div>
 
                 {!showSquadForge ? (
-                    <button className="btn-elite" onClick={() => setShowSquadForge(true)} style={{ width: '100%', marginTop: '1.5rem', fontSize: '0.7rem' }}>FORGE NEW SQUAD +</button>
+                    <button className="btn-elite" onClick={(e) => { e.stopPropagation(); setShowSquadForge(true); }} style={{ width: '100%', marginTop: '1.5rem', fontSize: '0.7rem', pointerEvents: 'auto', zIndex: 100, cursor: 'pointer' }}>FORGE NEW SQUAD +</button>
                 ) : (
                     <div className="page-transition" style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'rgba(139,92,246,0.05)', borderRadius: '12px', border: '1px solid var(--primary)' }}>
                         <input placeholder="Squad Name" className="form-control" style={{ fontSize: '0.8rem', marginBottom: '0.8rem' }} onChange={e => setNewSquad({...newSquad, teamName: e.target.value})} />
                         <input placeholder="Skills (e.g. Python, Design)" className="form-control" style={{ fontSize: '0.8rem', marginBottom: '1rem' }} onChange={e => setNewSquad({...newSquad, skills: e.target.value})} />
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className="btn-primary" style={{ flex: 1, fontSize: '0.7rem' }} onClick={async () => {
+                            <button className="btn-primary" style={{ flex: 1, fontSize: '0.7rem', pointerEvents: 'auto', zIndex: 10 }} onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!newSquad.teamName.trim() || !newSquad.skills.trim()) {
+                                    alert("Identity requires a Team Name and Skills manifest.");
+                                    return;
+                                }
                                 try {
-                                    await api.booking.post('/squads', {
+                                    console.log("[Squad Forge]: Initiating deployment...", newSquad);
+                                    const res = await api.booking.post('/squads', {
                                         eventId: id, creatorId: user.id, creatorName: user.name,
                                         teamName: newSquad.teamName, skills: newSquad.skills
                                     });
-                                    setShowSquadForge(false);
-                                    api.booking.get(`/squads/event/${id}`).then(r => setSquads(r.data));
-                                } catch(e) { alert("Forge failed."); }
+                                    if (res.data) {
+                                        setShowSquadForge(false);
+                                        const refreshRes = await api.booking.get(`/squads/event/${id}`);
+                                        setSquads(Array.isArray(refreshRes.data) ? refreshRes.data : []);
+                                        console.log("[Squad Forge]: Deployment successful.");
+                                    }
+                                } catch(e) { 
+                                    console.error("[Squad Forge]: Failure:", e);
+                                    alert("Forge failure: Connectivity interrupted."); 
+                                }
                             }}>FORGE</button>
-                            <button onClick={() => setShowSquadForge(false)} style={{ background: 'transparent', border: 'none', color: 'white', opacity: 0.5, fontSize: '0.7rem' }}>CANCEL</button>
+                            <button onClick={(e) => { e.stopPropagation(); setShowSquadForge(false); }} style={{ background: 'transparent', border: 'none', color: 'white', opacity: 0.5, fontSize: '0.7rem', cursor: 'pointer', pointerEvents: 'auto' }}>CANCEL</button>
                         </div>
                     </div>
                 )}

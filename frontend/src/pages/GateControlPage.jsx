@@ -32,29 +32,72 @@ const GateControlPage = () => {
         setSuccess('');
         setPreview(null);
 
-        // 🛡️ AGGRESSIVE CLEANING: Strip EVERYTHING except the numeric ID
-        const cleanId = ticketId.replace(/[^0-9]/g, '').trim();
+        // 🛠️ HIGH-FIDELITY EXTRACTION
+        let cleanId = ticketId.trim();
+        
+        // 1. Check for JSON QR Data
+        if (cleanId.startsWith('{')) {
+            try {
+                const qr = JSON.parse(cleanId);
+                cleanId = qr.passId || cleanId;
+            } catch(e) {}
+        }
 
-        if (!cleanId) {
-            setError("INVALID PASS ID: Numeric ID expected.");
+        // 2. Extract pure numeric ID (Supports TF-47, TF47, or just 47)
+        const finalId = cleanId.replace(/[^0-9]/g, '');
+
+        console.log(`[Gate Terminal]: Syncing with Registry for ID -> ${finalId}`);
+
+        if (!finalId) {
+            setError("PROTOCOL ERROR: No numeric ID detected in scan.");
             setLoading(false);
             return;
         }
 
         try {
-            const res = await api.booking.get(`/preview-ticket/${cleanId}`);
+            // 📡 ATTEMPT 1: DIRECT REGISTRY SYNC
+            console.log(`[Gate Terminal]: Initializing Direct Sync for TF-${finalId}...`);
+            const res = await api.booking.get(`/preview-ticket/${finalId}`);
             setPreview(res.data);
-            if (res.data.status?.includes('ADMITTED')) {
-                setSuccess('PREVIOUSLY VERIFIED: Entry already recorded.');
-            } else if (res.data.status?.includes('REJECTED')) {
-                setError('ENTRY DENIED: This pass is blacklisted.');
-            }
+            handlePreviewState(res.data);
+            
         } catch (err) {
-            console.error("Search Error:", err);
-            setError(err.response?.data || 'Pass ID not found in registry.');
+            console.warn(`[Gate Terminal]: Direct Sync failed for ID ${finalId}. Initiating Deep Registry Sweep...`);
+            
+            try {
+                // 🔍 ATTEMPT 2: DEEP REGISTRY SWEEP (Fallback)
+                const allRes = await api.booking.get('');
+                const allBookings = Array.isArray(allRes.data) ? allRes.data : [];
+                setRegistrySize(allBookings.length);
+                
+                const match = allBookings.find(b => b.id.toString() === finalId.toString());
+                
+                if (match) {
+                    console.log("[Gate Terminal]: Identity Resolved via Registry Sweep:", match);
+                    const resolvedPreview = {
+                        ...match,
+                        ticketId: match.id,
+                        isActionable: !(['ADMITTED', 'CANCELLED', 'REFUNDED'].includes(match.status?.toUpperCase()))
+                    };
+                    setPreview(resolvedPreview);
+                    handlePreviewState(resolvedPreview);
+                } else {
+                    throw new Error("NOT_IN_REGISTRY");
+                }
+            } catch (sweepErr) {
+                console.error("[Gate Terminal]: Total Resolution Failure:", sweepErr);
+                setError(`Pass TF-${finalId} not found. (Registry Size: ${registrySize !== null ? registrySize : 'Synchronizing...'})`);
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePreviewState = (data) => {
+        const bStatus = data.status?.toUpperCase() || '';
+        if (bStatus.includes('ADMITTED')) setSuccess('PASS PRE-VERIFIED: Entry already recorded.');
+        else if (bStatus.includes('REJECTED')) setError('SECURITY ALERT: This pass is blacklisted.');
+        else if (bStatus.includes('INVALID') || bStatus.includes('CANCELLED')) setError('VOID PASS: Ticket has been revoked.');
     };
 
     const handleAdmit = async () => {

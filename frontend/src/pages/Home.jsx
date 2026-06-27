@@ -128,38 +128,30 @@ const Home = () => {
         </div>
       </section>
 
-      {/* 📍 NEXUS INTERACTIVE NAVIGATOR */}
-      <section style={{ padding: '6rem 0 12rem 0' }}>
+      {/* 📍 CAMPUS NEXUS EXPLORER */}
+      <section style={{ padding: '8rem 0' }}>
         <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-          <h2 className="gradient-text" style={{ fontSize: '3.5rem', fontWeight: '950' }}>Campus Nexus.</h2>
-          <p style={{ color: 'var(--text-dim)', opacity: 0.6, fontSize: '1.2rem' }}>Interactive venue intelligence for the TechFest ecosystem.</p>
+          <h2 className="gradient-text" style={{ fontSize: '3.5rem', fontWeight: '950' }}>Campus Nexus Explorer.</h2>
+          <p style={{ color: 'var(--text-dim)', opacity: 0.6, fontSize: '1.2rem' }}>Navigate the Technical Fest ecosystem in real-time.</p>
         </div>
 
-        <div className="glass-panel" style={{ padding: '4rem', overflow: 'hidden', position: 'relative', minHeight: '700px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          {/* Isometric Map Background */}
-          <div className="iso-grid">
-            <div className="venue-node" style={{ top: '20%', left: '30%' }}>
-              <div className="pulse-ping"></div>
-              <div className="node-label">CONVOCATION HALL</div>
-            </div>
-            <div className="venue-node" style={{ top: '50%', left: '60%' }}>
-              <div className="pulse-ping" style={{ animationDelay: '1s', background: 'var(--secondary)', boxShadow: '0 0 20px var(--secondary)' }}></div>
-              <div className="node-label">NETWORKING ARENA</div>
-            </div>
-            <div className="venue-node" style={{ top: '70%', left: '20%' }}>
-              <div className="pulse-ping" style={{ animationDelay: '0.5s', background: 'var(--accent)', boxShadow: '0 0 20px var(--accent)' }}></div>
-              <div className="node-label">INNOVATION LAB</div>
-            </div>
-            <div className="venue-node" style={{ top: '40%', left: '80%' }}>
-              <div className="pulse-ping" style={{ animationDelay: '1.5s' }}></div>
-              <div className="node-label">ROBO-STADIUM</div>
-            </div>
-          </div>
-          
-          <div style={{ position: 'absolute', bottom: '3rem', right: '3rem', textAlign: 'right' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 950, color: 'var(--primary)', letterSpacing: '3px', marginBottom: '0.8rem' }}>LIVE TELEMETRY</div>
-            <div style={{ fontSize: '1rem', color: 'var(--text-main)', opacity: 0.5, fontWeight: 700 }}>● GPS-EDGE: SYNCHRONIZED</div>
-          </div>
+        <div className="glass-panel" style={{ padding: '1rem', overflow: 'hidden', position: 'relative', borderRadius: '2.5rem', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.4)' }}>
+           <iframe
+              title="Campus Map Explorer"
+              width="100%"
+              height="600"
+              style={{ border: 'none', borderRadius: '2rem' }}
+              loading="lazy"
+              src={`https://maps.google.com/maps?q=Vel+Tech+University+Avadi&output=embed&z=14`}
+           />
+           <div style={{ position: 'absolute', bottom: '3rem', right: '3rem', background: 'rgba(15, 23, 42, 0.95)', padding: '1.5rem 2.5rem', borderRadius: '1.5rem', border: '1px solid var(--primary)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 950, color: 'var(--primary)', letterSpacing: '3px', marginBottom: '0.5rem' }}>OFFICIAL VENUE NETWORK</div>
+              <div style={{ fontSize: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
+                Vel Tech Technical University<br />
+                Avadi, Chennai - 600062
+              </div>
+              <button className="btn-primary" onClick={() => navigate('/events')} style={{ marginTop: '1.5rem', width: '100%', fontSize: '0.75rem', padding: '0.8rem' }}>EXPLORE EVENT VENUES →</button>
+           </div>
         </div>
       </section>
 

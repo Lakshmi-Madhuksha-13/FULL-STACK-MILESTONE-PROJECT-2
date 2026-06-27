@@ -103,7 +103,17 @@ const TicketModal = ({ booking, event, user, onClose }) => {
 
             <div style={{ marginBottom: '2rem' }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', letterSpacing: '1px' }}>VENUE</div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{event.venue || 'Main Auditorium, Tech Campus'}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{event.venue || 'Main Auditorium, Tech Campus'}</div>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue || 'Main Auditorium, Tech Campus')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', borderBottom: '1px dashed #8b5cf6' }}
+                >
+                  📍 NAVIGATE
+                </a>
+              </div>
             </div>
 
             {attendees.length > 0 && (
@@ -121,7 +131,19 @@ const TicketModal = ({ booking, event, user, onClose }) => {
              <div style={{ background: '#fff', display: 'inline-block', padding: '15px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginBottom: '1rem' }}>
                 <QRCodeCanvas value={qrData} size={160} level={"H"} includeMargin={false} />
              </div>
-             <div style={{ fontSize: '0.6rem', color: '#94a3b8', letterSpacing: '2px', fontWeight: 800 }}>SCAN TO VALIDATE ENTRY</div>
+             <div style={{ fontSize: '0.6rem', color: '#94a3b8', letterSpacing: '2px', fontWeight: 800, marginBottom: '1.5rem' }}>SCAN TO VALIDATE ENTRY</div>
+             
+             {/* 📍 MINI MAP PREVIEW */}
+             <div style={{ borderRadius: '15px', overflow: 'hidden', border: '1px solid #e2e8f0', height: '120px' }}>
+                <iframe
+                  title="Ticket Venue Map"
+                  width="100%"
+                  height="120"
+                  style={{ border: 'none' }}
+                  loading="lazy"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(event.venue)}&output=embed&z=15`}
+                />
+             </div>
           </div>
         </div>
 

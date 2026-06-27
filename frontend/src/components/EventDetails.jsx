@@ -53,6 +53,40 @@ const EventDetails = ({ event }) => {
         you cannot miss.
       </p>
 
+      {/* 🗺️ GOOGLE MAPS LOCATION */}
+      {event.venue && (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.5, letterSpacing: '1.5px', marginBottom: '0.8rem' }}>
+            📍 VENUE LOCATION
+          </div>
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-border)', position: 'relative' }}>
+            <iframe
+              title="Event Venue Map"
+              width="100%"
+              height="220"
+              style={{ display: 'block', border: 'none' }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(event.venue)}&output=embed&z=15`}
+            />
+          </div>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              marginTop: '0.8rem', fontSize: '0.75rem', fontWeight: 700,
+              color: 'var(--primary)', textDecoration: 'none',
+              padding: '0.5rem 1rem', background: 'rgba(139,92,246,0.08)',
+              borderRadius: '8px', border: '1px solid rgba(139,92,246,0.2)',
+              transition: '0.2s'
+            }}>
+            🗺️ Open in Google Maps ↗
+          </a>
+        </div>
+      )}
+
       {/* Community Buzz */}
       <div style={{ padding: '1.2rem', background: 'rgba(139,92,246,0.05)', borderRadius: '12px', border: '1px solid rgba(139,92,246,0.2)' }}>
         <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.5, letterSpacing: '1.5px', marginBottom: '0.6rem' }}>💬 COMMUNITY BUZZ</div>
