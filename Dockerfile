@@ -27,7 +27,7 @@ RUN mvn -f booking-service/pom.xml clean package -DskipTests
 # ==========================================
 # 2. BUILD FRONTEND STATIC ASSETS
 # ==========================================
-FROM node:18-alpine AS frontend-build
+FROM node:20-alpine AS frontend-build
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
