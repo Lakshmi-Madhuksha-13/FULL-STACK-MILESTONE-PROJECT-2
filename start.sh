@@ -44,5 +44,11 @@ echo "⚙️ Starting Booking Service..."
 java -Dspring.datasource.url=jdbc:mysql://localhost:3306/ticket_booking?useSSL=false -Dspring.datasource.username=root -Dspring.datasource.password= -jar /app/booking-service.jar > /tmp/booking-service.log 2>&1 &
 
 # 5. Start Nginx reverse proxy in foreground (keeps container alive)
-echo "🌐 Starting Nginx Web Server on port 7860..."
+if [ ! -z "$PORT" ]; then
+    echo "🌐 Setting Nginx port to $PORT..."
+    sed -i "s/listen 7860/listen $PORT/g" /etc/nginx/sites-available/default
+    echo "🌐 Starting Nginx Web Server on port $PORT..."
+else
+    echo "🌐 Starting Nginx Web Server on port 7860..."
+fi
 nginx -g "daemon off; pid /tmp/nginx.pid;"
