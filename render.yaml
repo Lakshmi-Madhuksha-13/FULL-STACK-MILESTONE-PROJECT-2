@@ -5,10 +5,6 @@ services:
     dockerfilePath: Dockerfile
     dockerContext: .
     plan: free
-    disk:
-      name: db-volume
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:h2:file:/app/data/ticket_booking_db;DB_CLOSE_DELAY=-1;MODE=MySQL
+        value: jdbc:h2:file:./ticket_booking_db;DB_CLOSE_DELAY=-1;MODE=MySQL
