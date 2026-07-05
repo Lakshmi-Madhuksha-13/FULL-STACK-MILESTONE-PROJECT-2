@@ -7,7 +7,6 @@ services:
     # Context directory (root of the repo)
     dockerContext: .
     plan: free
-    port: 8080
     
     # 💾 PERSISTENT DATABASE STORAGE
     # Mount a 1GB persistent disk to save database state across redeploys and sleeps
