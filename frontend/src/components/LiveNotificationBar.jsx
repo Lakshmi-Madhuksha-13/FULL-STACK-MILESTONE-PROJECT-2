@@ -10,7 +10,10 @@ const LiveNotificationBar = () => {
         if (!user) return;
 
         const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
-        const socket = new SockJS(`http://${host}:8081/ws-stomp`);
+        const socketUrl = window.location.port === '5173'
+            ? `http://${host}:8081/ws-stomp`
+            : `${window.location.protocol}//${window.location.host}/ws-stomp`;
+        const socket = new SockJS(socketUrl);
         const stompClient = Stomp.over(socket);
         stompClient.debug = () => {};
 

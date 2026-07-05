@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PaymentModal from '../components/PaymentModal';
+import TicketModal from '../components/TicketModal';
 import MapView from '../components/MapView';
 import SeatLayout from '../components/SeatLayout';
 

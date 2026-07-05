@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// 🌐 ENTERPRISE CLOUD SYNC
-const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'; 
+// 🌐 DYNAMIC PORT DETECTION
+// If window.location.port is 5173, we are running in local frontend development (Vite dev server).
+// Otherwise, we are served directly by the standalone monolith (or a production proxy), so we use relative paths.
+const isMonolithOrProd = window.location.port !== '5173'; 
 
 const getBaseURL = (port) => {
     const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
@@ -24,7 +26,7 @@ const CLOUD_URLS = {
     SUPPORT_SERVICE: "/api/support"
 };
 
-const URLS = isProduction ? CLOUD_URLS : LOCAL_URLS;
+const URLS = isMonolithOrProd ? CLOUD_URLS : LOCAL_URLS;
 
 const api = {
     user: axios.create({ baseURL: URLS.USER_SERVICE }),

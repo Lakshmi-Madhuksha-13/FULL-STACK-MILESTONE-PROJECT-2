@@ -1,0 +1,67 @@
+package com.veltech.userservice.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "events_users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String email;
+    private String password;
+    private String role; // USER / ADMIN
+    private String department;
+    private String college;
+    private Integer coins;
+    private String tier = "ROOKIE"; // ROOKIE, PRO, ELITE, LEGEND
+    private String usedQuests = ""; // CSV of redeemed quest codes
+
+    public User() {
+    }
+
+    public User(String name, String email, String password, String role, String department, String college) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.department = department;
+        this.college = college;
+        this.coins = 100; // Welcome bonus
+        this.tier = "ROOKIE";
+        this.usedQuests = "";
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getCollege() { return college; }
+    public void setCollege(String college) { this.college = college; }
+
+    public Integer getCoins() { return coins; }
+    public void setCoins(Integer coins) { this.coins = coins; }
+
+    public String getTier() { return tier; }
+    public void setTier(String tier) { this.tier = tier; }
+
+    public String getUsedQuests() { return usedQuests; }
+    public void setUsedQuests(String usedQuests) { this.usedQuests = usedQuests; }
+}

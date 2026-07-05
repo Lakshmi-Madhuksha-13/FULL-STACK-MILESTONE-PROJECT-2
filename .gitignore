@@ -1,0 +1,27 @@
+# Eclipse Metadata
+.metadata/
+
+# VS Code Metadata
+.vscode/
+
+# Local H2 Databases
+*.mv.db
+*.trace.db
+ticket_booking_db.*
+
+# Maven Target folders and packages
+target/
+**/target/
+*.jar
+*.war
+*.ear
+
+# Node modules and build distributions
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# OS files
+.DS_Store
+Thumbs.db

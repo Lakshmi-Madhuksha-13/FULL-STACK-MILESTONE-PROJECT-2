@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: technical-fest-booking
+    env: docker
+    # Path to the Dockerfile relative to the context
+    dockerfilePath: standalone-app/Dockerfile
+    # Context directory (root of the repo)
+    dockerContext: .
+    plan: free
+    port: 8080
+    
+    # 💾 PERSISTENT DATABASE STORAGE
+    # Mount a 1GB persistent disk to save database state across redeploys and sleeps
+    disk:
+      name: db-volume
+      mountPath: /app/data
+      sizeGB: 1
+      
+    envVars:
+      # Direct Spring Boot to write the database file inside the mounted volume path
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:h2:file:/app/data/ticket_booking_db;DB_CLOSE_DELAY=-1;MODE=MySQL
