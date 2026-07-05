@@ -1,10 +1,15 @@
 services:
   - type: web
-      name: technical-fest-booking
-          env: docker
-              dockerfilePath: standalone-app/Dockerfile
-                  dockerContext: .
-                      plan: free
-                          envVars:
-                                - key: SPRING_DATASOURCE_URL
-                                        value: jdbc:h2:file:./ticket_booking_db;DB_CLOSE_DELAY=-1;MODE=MySQL
+    name: technical-fest-booking
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    port: 8080
+    disk:
+      name: db-volume
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:h2:file:/app/data/ticket_booking_db;DB_CLOSE_DELAY=-1;MODE=MySQL
