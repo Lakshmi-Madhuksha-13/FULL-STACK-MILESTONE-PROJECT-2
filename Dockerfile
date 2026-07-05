@@ -11,7 +11,8 @@ RUN npm run build
 # ==========================================
 # 2. BUILD CONSOLIDATED BACKEND MONOLITH
 # ==========================================
-FROM maven:3.9-eclipse-temurin-17-alpine AS backend-build
+# Spring Boot 4.x requires Java 21+
+FROM maven:3.9-eclipse-temurin-21 AS backend-build
 WORKDIR /app
 
 # Copy pom.xml and source code of the monolith
@@ -21,13 +22,14 @@ COPY standalone-app/src ./standalone-app/src
 # Copy built frontend assets into the Maven build context
 COPY --from=frontend-build /app/dist ./frontend/dist
 
-# Build the monolithic JAR (which copies assets from ../frontend/dist based on pom.xml configuration)
+# Build the monolithic JAR (copies assets from ../frontend/dist per pom.xml config)
 RUN mvn -f standalone-app/pom.xml clean package -DskipTests
 
 # ==========================================
 # 3. FINAL RUNTIME IMAGE
 # ==========================================
-FROM eclipse-temurin:17-jre-alpine
+# Spring Boot 4.x requires Java 21+
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the built jar from the backend-build stage
